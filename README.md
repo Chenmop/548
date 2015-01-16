@@ -2,7 +2,7 @@
 
 This emulator is based on a version of TrinityCore
 
-Build Support 5.4.0.17399 - Mist of Pandaria.
+Build Support 5.4.8 18414 - Mist of Pandaria.
 
 Emulator is currently in development. It is also completely open source.
 You can help by providing updates via pull requests
