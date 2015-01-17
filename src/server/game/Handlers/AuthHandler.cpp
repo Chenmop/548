@@ -32,66 +32,63 @@ void WorldSession::SendAuthResponse(uint8 code, bool queued, uint32 queuePos)
    
 	WorldPacket packet(SMSG_AUTH_RESPONSE, 80);
     
+	packet.WriteBit(code == AUTH_OK);
+
+	if (code == AUTH_OK)
+	{
+		packet.WriteBits(0, 21); // Send current realmId
+
+		packet.WriteBits(classresult->GetRowCount(), 23);
+		packet.WriteBits(0, 21);
+		packet.WriteBit(0);
+		packet.WriteBit(0);
+		packet.WriteBit(0);
+		packet.WriteBit(0);
+		packet.WriteBits(raceresult->GetRowCount(), 23);
+		packet.WriteBit(0);
+	}
+
 	packet.WriteBit(queued);
-    packet.WriteBit(code == AUTH_OK);                          // has account info
 
-    if (code == AUTH_OK)
-    {
-		// account info
-        packet.WriteBits(0, 21);
-        packet.WriteBit(0);         // Unknown
-        packet.WriteBits(classresult->GetRowCount(), 23);
-        packet.WriteBit(0);         // Unknown
-        packet.WriteBit(0);         // Unknown
-        packet.WriteBits(0, 21);    // Unknown
-        packet.WriteBit(0);         // Unknown
-        packet.WriteBits(raceresult->GetRowCount(), 23);
+	if (queued)
+		packet.WriteBit(1);                             // Unknown
 
-        packet.FlushBits();
-    }
+	packet.FlushBits();
 
-    if (queued)
-    {
-        packet.WriteBit(0);
-        packet << uint32(queuePos);                             // Queue position
+	if (queued)
+		packet << uint32(0);                            // Unknown
 
-        packet.FlushBits();
-    }
+	if (code == AUTH_OK)
+	{
+		do
+		{
+			Field* fields = raceresult->Fetch();
 
-    if (code == AUTH_OK)
-    {
-        do
-        {
-            Field* fields = classresult->Fetch();
+			packet << fields[1].GetUInt8();
+			packet << fields[0].GetUInt8();
+		} while (raceresult->NextRow());
 
-            packet << fields[0].GetUInt8();
-            packet << fields[1].GetUInt8();
-        } while (classresult->NextRow());        
+		do
+		{
+			Field* fields = classresult->Fetch();
 
-        packet << uint32(0);
+			packet << fields[1].GetUInt8();
+			packet << fields[0].GetUInt8();
+		} while (classresult->NextRow());
 
-        do
-        {
-            Field* fields = raceresult->Fetch();
+		packet << uint32(0);
+		packet << uint8(Expansion());
+		packet << uint32(Expansion());
+		packet << uint32(0);
+		packet << uint8(Expansion());
+		packet << uint32(0);
+		packet << uint32(0);
+		packet << uint32(0);
+	}
 
-            packet << fields[1].GetUInt8();
-            packet << fields[0].GetUInt8();
-        } while (raceresult->NextRow());
+	packet << uint8(code);                             // Auth response ?
 
-
-        packet << uint32(0);                                   // BillingTimeRemaining
-        packet << uint32(0);                                   // BillingTimeRested
-
-        packet << uint8(Expansion());                          // 0 - normal, 1 - TBC, 2 - WOTLK, 3 - CATA; must be set in database manually for each account
-        packet << uint8(Expansion());                          // Unknown, these two show the same
-
-        packet << uint32(0);
-        packet << uint32(0);
-    }
-
-    packet << uint8(code);
-
-    SendPacket(&packet);
+	SendPacket(&packet);
 }
 
 void WorldSession::SendClientCacheVersion(uint32 version)

@@ -19,270 +19,6 @@
 #ifndef _UPDATEFIELDS_H
 #define _UPDATEFIELDS_H
 
-struct CGObjectData
-{
-    uint32 m_guid[2];
-    uint32 m_data[2];
-    uint32 m_type;
-    uint32 m_entryID;
-    uint32 m_dynamicFlags;
-    uint32 m_scale;
-};
-
-struct CGItemData
-{
-    uint32 m_owner[2];
-    uint32 m_containedIn[2];
-    uint32 m_creator[2];
-    uint32 m_giftCreator[2];
-    uint32 m_stackCount;
-    uint32 m_expiration;
-    uint32 m_spellCharges[5];
-    uint32 m_dynamicFlags;
-    uint32 m_enchantment[39];
-    uint32 m_propertySeed;
-    uint32 m_randomPropertiesID;
-    uint32 m_durability;
-    uint32 m_maxDurability;
-    uint32 m_createPlayedTime;
-    uint32 m_modifiersMask;
-};
-
-struct CGContainerData
-{
-    uint32 m_slots[72];
-    uint32 m_numSlots;
-};
-
-struct CGUnitData
-{
-    uint32 charm[2];
-    uint32 summon[2];
-    uint32 critter[2];
-    uint32 charmedBy[2];
-    uint32 summonedBy[2];
-    uint32 createdBy[2];
-    uint32 demonCreator[2];
-    uint32 target[2];
-    uint32 battlePetCompanionGUID[2];
-    uint32 channelObject[2];
-    uint32 channelSpell;
-    uint32 summonedByHomeRealm;
-    uint32 sex;
-    uint32 displayPower;
-    uint32 overrideDisplayPowerID;
-    uint32 health;
-    uint32 power[5];
-    uint32 maxHealth;
-    uint32 maxPower[5];
-    uint32 powerRegenFlatModifier[5];
-    uint32 powerRegenInterruptedFlatModifier[5];
-    uint32 level;
-    uint32 effectiveLevel;
-    uint32 factionTemplate;
-    uint32 virtualItemID[3];
-    uint32 flags;
-    uint32 flags2;
-    uint32 auraState;
-    uint32 attackRoundBaseTime[2];
-    uint32 rangedAttackRoundBaseTime;
-    uint32 boundingRadius;
-    uint32 combatReach;
-    uint32 displayID;
-    uint32 nativeDisplayID;
-    uint32 mountDisplayID;
-    uint32 minDamage;
-    uint32 maxDamage;
-    uint32 minOffHandDamage;
-    uint32 maxOffHandDamage;
-    uint32 animTier;
-    uint32 petNumber;
-    uint32 petNameTimestamp;
-    uint32 petExperience;
-    uint32 petNextLevelExperience;
-    uint32 modCastingSpeed;
-    uint32 modSpellHaste;
-    uint32 modHaste;
-    uint32 modRangedHaste;
-    uint32 modHasteRegen;
-    uint32 createdBySpell;
-    uint32 npcFlags;
-    uint32 emoteState;
-    uint32 stats[5];
-    uint32 statPosBuff[5];
-    uint32 statNegBuff[5];
-    uint32 resistances[7];
-    uint32 resistanceBuffModsPositive[7];
-    uint32 resistanceBuffModsNegative[7];
-    uint32 baseMana;
-    uint32 baseHealth;
-    uint32 shapeshiftForm;
-    uint32 attackPower;
-    uint32 attackPowerModPos;
-    uint32 attackPowerModNeg;
-    uint32 attackPowerMultiplier;
-    uint32 rangedAttackPower;
-    uint32 rangedAttackPowerModPos;
-    uint32 rangedAttackPowerModNeg;
-    uint32 rangedAttackPowerMultiplier;
-    uint32 minRangedDamage;
-    uint32 maxRangedDamage;
-    uint32 powerCostModifier[7];
-    uint32 powerCostMultiplier[7];
-    uint32 maxHealthModifier;
-    uint32 hoverHeight;
-    uint32 minItemLevel;
-    uint32 maxItemLevel;
-    uint32 wildBattlePetLevel;
-    uint32 battlePetCompanionNameTimestamp;
-    uint32 interactSpellID;
-};
-
-struct CGPlayerData
-{
-    uint32 duelArbiter[2];
-    uint32 playerFlags;
-    uint32 guildRankID;
-    uint32 guildDeleteDate;
-    uint32 guildLevel;
-    uint32 hairColorID;
-    uint32 restState;
-    uint32 arenaFaction;
-    uint32 duelTeam;
-    uint32 guildTimeStamp;
-    uint32 questLog[750];
-    uint32 visibleItems[38];
-    uint32 playerTitle;
-    uint32 fakeInebriation;
-    uint32 virtualPlayerRealm;
-    uint32 currentSpecID;
-    uint32 taxiMountAnimKitID;
-    uint32 currentBattlePetBreedQuality;
-    uint32 local_invSlots[172];
-    uint32 local_farsightObject[2];
-    uint32 local_knownTitles[10];
-    uint32 local_coinage[2];
-    uint32 local_XP;
-    uint32 local_nextLevelXP;
-    uint32 local_skill[448];
-    uint32 local_characterPoints;
-    uint32 local_maxTalentTiers;
-    uint32 local_trackCreatureMask;
-    uint32 local_trackResourceMask;
-    uint32 local_mainhandExpertise;
-    uint32 local_offhandExpertise;
-    uint32 local_rangedExpertise;
-    uint32 local_combatRatingExpertise;
-    uint32 local_blockPercentage;
-    uint32 local_dodgePercentage;
-    uint32 local_parryPercentage;
-    uint32 local_critPercentage;
-    uint32 local_rangedCritPercentage;
-    uint32 local_offhandCritPercentage;
-    uint32 local_spellCritPercentage[7];
-    uint32 local_shieldBlock;
-    uint32 local_shieldBlockCritPercentage;
-    uint32 local_mastery;
-    uint32 local_pvpPowerDamage;
-    uint32 local_pvpPowerHealing;
-    uint32 local_exploredZones[200];
-    uint32 local_restStateBonusPool;
-    uint32 local_modDamageDonePos[7];
-    uint32 local_modDamageDoneNeg[7];
-    uint32 local_modDamageDonePercent[7];
-    uint32 local_modHealingDonePos;
-    uint32 local_modHealingPercent;
-    uint32 local_modHealingDonePercent;
-    uint32 local_modPeriodicHealingDonePercent;
-    uint32 local_weaponDmgMultipliers[3];
-    uint32 local_modSpellPowerPercent;
-    uint32 local_modResiliencePercent;
-    uint32 local_overrideSpellPowerByAPPercent;
-    uint32 local_overrideAPBySpellPowerPercent;
-    uint32 local_modTargetResistance;
-    uint32 local_modTargetPhysicalResistance;
-    uint32 local_lifetimeMaxRank;
-    uint32 local_selfResSpell;
-    uint32 local_pvpMedals;
-    uint32 local_buybackPrice[12];
-    uint32 local_buybackTimestamp[12];
-    uint32 local_yesterdayHonorableKills;
-    uint32 local_lifetimeHonorableKills;
-    uint32 local_watchedFactionIndex;
-    uint32 local_combatRatings[27];
-    uint32 local_pvpInfo[24];
-    uint32 local_maxLevel;
-    uint32 local_runeRegen[4];
-    uint32 local_noReagentCostMask[4];
-    uint32 local_glyphSlots[6];
-    uint32 local_glyphs[6];
-    uint32 local_glyphSlotsEnabled;
-    uint32 local_petSpellPower;
-    uint32 local_researching[8];
-    uint32 local_professionSkillLine[2];
-    uint32 local_uiHitModifier;
-    uint32 local_uiSpellHitModifier;
-    uint32 local_homeRealmTimeOffset;
-    uint32 local_modPetHaste;
-    uint32 local_summonedBattlePetGUID[2];
-    uint32 local_overrideSpellsID;
-    uint32 local_lfgBonusFactionID;
-    uint32 local_lootSpecID;
-    uint32 local_overrideZonePVPType;
-    uint32 local_itemLevelDelta;
-};
-
-struct CGGameObjectData
-{
-    uint32 m_createdBy[2];
-    uint32 m_displayID;
-    uint32 m_flags;
-    uint32 m_parentRotation[4];
-    uint32 m_factionTemplate;
-    uint32 m_level;
-    uint32 m_percentHealth;
-    uint32 m_stateSpellVisualID;
-};
-
-struct CGDynamicObjectData
-{
-    uint32 m_caster[2];
-    uint32 m_typeAndVisualID;
-    uint32 m_spellID;
-    uint32 m_radius;
-    uint32 m_castTime;
-};
-
-struct CGCorpseData
-{
-    uint32 m_owner[2];
-    uint32 m_partyGUID[2];
-    uint32 m_displayID;
-    uint32 m_items[19];
-    uint32 m_skinID;
-    uint32 m_facialHairStyleID;
-    uint32 m_flags;
-    uint32 m_dynamicFlags;
-};
-
-struct CGAreaTriggerData
-{
-    uint32 m_caster[2];
-    uint32 m_duration;
-    uint32 m_spellID;
-    uint32 m_spellVisualID;
-    uint32 m_explicitScale;
-};
-
-struct CGSceneObjectData
-{
-    uint32 m_scriptPackageID;
-    uint32 m_rndSeedVal;
-    uint32 m_createdBy[2];
-    uint32 m_sceneType;
-};
-
-
 enum EObjectFields
 {
 	OBJECT_FIELD_GUID                                = 0x0000, // Size: 2, Type: LONG, Flags: PUBLIC
@@ -567,57 +303,57 @@ enum EPlayerDynamicFields
 
 enum EGameObjectFields
 {
-    OBJECT_FIELD_CREATED_BY                          = 8, // SIZE:2
-    GAMEOBJECT_DISPLAYID                             = 10, // SIZE:1
-    GAMEOBJECT_FLAGS                                 = 11, // SIZE:1
-    GAMEOBJECT_PARENTROTATION                        = 12, // SIZE:4
-    GAMEOBJECT_FACTION                               = 16, // SIZE:1
-    GAMEOBJECT_LEVEL                                 = 17, // SIZE:1
-    GAMEOBJECT_BYTES_1                               = 18, // SIZE:1
-    GAMEOBJECT_STATE_SPELL_VISUAL_ID                 = 19, // SIZE:1
-    GAMEOBJECT_END                                   = 20
+	OBJECT_FIELD_CREATED_BY = OBJECT_END + 0x0, // Size: 2, Flags: UF_FLAG_PUBLIC
+	GAMEOBJECT_DISPLAYID = OBJECT_END + 0x2, // Size: 1, Flags: UF_FLAG_PUBLIC
+	GAMEOBJECT_FLAGS = OBJECT_END + 0x3, // Size: 1, Flags: UF_FLAG_PUBLIC, UF_FLAG_URGENT
+	GAMEOBJECT_PARENTROTATION = OBJECT_END + 0x4, // Size: 4, Flags: UF_FLAG_PUBLIC
+	GAMEOBJECT_FACTION = OBJECT_END + 0x8, // Size: 1, Flags: UF_FLAG_PUBLIC
+	GAMEOBJECT_LEVEL = OBJECT_END + 0x9, // Size: 1, Flags: UF_FLAG_PUBLIC
+	GAMEOBJECT_BYTES_1 = OBJECT_END + 0xA, // Size: 1, Flags: UF_FLAG_PUBLIC, UF_FLAG_URGENT
+	GAMEOBJECT_STATE_SPELL_VISUAL_ID = OBJECT_END + 0xB, // Size: 1, Flags: UF_FLAG_PUBLIC, UF_FLAG_URGENT
+	GAMEOBJECT_END = OBJECT_END + 0xC
 };
 
 enum EDynamicObjectFields
 {
-    DYNAMICOBJECT_CASTER                             = OBJECT_END + 0x0000, // Size: 2, Type: LONG, Flags: PUBLIC
-    DYNAMICOBJECT_BYTES                              = OBJECT_END + 0x0002, // Size: 1, Type: INT, Flags: DYNAMIC //DYNAMICOBJECT_FIELD_TYPE_AND_VISUAL_ID
-    DYNAMICOBJECT_SPELLID                            = OBJECT_END + 0x0003, // Size: 1, Type: INT, Flags: PUBLIC
-    DYNAMICOBJECT_RADIUS                             = OBJECT_END + 0x0004, // Size: 1, Type: FLOAT, Flags: PUBLIC
-    DYNAMICOBJECT_CASTTIME                           = OBJECT_END + 0x0005, // Size: 1, Type: INT, Flags: PUBLIC
-    DYNAMICOBJECT_END                                = OBJECT_END + 0x0006
+	DYNAMICOBJECT_CASTER = OBJECT_END + 0x0, // Size: 2, Flags: UF_FLAG_PUBLIC
+	DYNAMICOBJECT_BYTES = OBJECT_END + 0x2, // Size: 1, Flags: UF_FLAG_VIEWER_DEPENDENT
+	DYNAMICOBJECT_SPELLID = OBJECT_END + 0x3, // Size: 1, Flags: UF_FLAG_PUBLIC
+	DYNAMICOBJECT_RADIUS = OBJECT_END + 0x4, // Size: 1, Flags: UF_FLAG_PUBLIC
+	DYNAMICOBJECT_CASTTIME = OBJECT_END + 0x5, // Size: 1, Flags: UF_FLAG_PUBLIC
+	DYNAMICOBJECT_END = OBJECT_END + 0x6
 };
 
 enum ECorpseFields
 {
-    CORPSE_FIELD_OWNER                               = OBJECT_END + 0x0000, // Size: 2, Type: LONG, Flags: PUBLIC
-    CORPSE_FIELD_PARTY                               = OBJECT_END + 0x0002, // Size: 2, Type: LONG, Flags: PUBLIC
-    CORPSE_FIELD_DISPLAY_ID                          = OBJECT_END + 0x0004, // Size: 1, Type: INT, Flags: PUBLIC
-    CORPSE_FIELD_ITEM                                = OBJECT_END + 0x0005, // Size: 19, Type: INT, Flags: PUBLIC
-    CORPSE_FIELD_BYTES_1                             = OBJECT_END + 0x0018, // Size: 1, Type: BYTES, Flags: PUBLIC //CORPSE_FIELD_SKINID
-    CORPSE_FIELD_BYTES_2                             = OBJECT_END + 0x0019, // Size: 1, Type: BYTES, Flags: PUBLIC //CORPSE_FIELD_FACIAL_HAIR_STYLE_ID
-    CORPSE_FIELD_FLAGS                               = OBJECT_END + 0x001A, // Size: 1, Type: INT, Flags: PUBLIC
-    CORPSE_FIELD_DYNAMIC_FLAGS                       = OBJECT_END + 0x001B, // Size: 1, Type: INT, Flags: DYNAMIC
-    CORPSE_END                                       = OBJECT_END + 0x001C
+	CORPSE_FIELD_OWNER = OBJECT_END + 0x00, // Size: 2, Flags: UF_FLAG_PUBLIC
+	CORPSE_FIELD_PARTY = OBJECT_END + 0x02, // Size: 2, Flags: UF_FLAG_PUBLIC
+	CORPSE_FIELD_DISPLAY_ID = OBJECT_END + 0x04, // Size: 1, Flags: UF_FLAG_PUBLIC
+	CORPSE_FIELD_ITEM = OBJECT_END + 0x05, // Size: 19, Flags: UF_FLAG_PUBLIC
+	CORPSE_FIELD_BYTES_1 = OBJECT_END + 0x18, // Size: 1, Flags: UF_FLAG_PUBLIC
+	CORPSE_FIELD_BYTES_2 = OBJECT_END + 0x19, // Size: 1, Flags: UF_FLAG_PUBLIC
+	CORPSE_FIELD_FLAGS = OBJECT_END + 0x1A, // Size: 1, Flags: UF_FLAG_PUBLIC
+	CORPSE_FIELD_DYNAMIC_FLAGS = OBJECT_END + 0x1B, // Size: 1, Flags: UF_FLAG_VIEWER_DEPENDENT
+	CORPSE_END = OBJECT_END + 0x1C
 };
 
 enum EAreaTriggerFields
 {
-	AREATRIGGER_CASTER                               = OBJECT_END + 0x0000,
-    AREATRIGGER_DURATION                             = OBJECT_END + 0x0002, // Size: 1, Type: INT, Flags: PUBLIC
-    AREATRIGGER_SPELLID                              = OBJECT_END + 0x0003, // Size: 1, Type: INT, Flags: PUBLIC
-    AREATRIGGER_SPELLVISUALID                        = OBJECT_END + 0x0004, // Size: 1, Type: INT, Flags: PUBLIC
-    AREATRIGGER_FIELD_EXPLICIT_SCALE                 = OBJECT_END + 0x0005, // Size: 1, Type: INT, Flags: PUBLIC
-    AREATRIGGER_END                                  = OBJECT_END + 0x0006
+	AREATRIGGER_CASTER = OBJECT_END + 0x0, // Size: 2, Flags: UF_FLAG_PUBLIC
+	AREATRIGGER_DURATION = OBJECT_END + 0x2, // Size: 1, Flags: UF_FLAG_PUBLIC
+	AREATRIGGER_SPELLID = OBJECT_END + 0x3, // Size: 1, Flags: UF_FLAG_PUBLIC
+	AREATRIGGER_SPELLVISUALID = OBJECT_END + 0x4, // Size: 1, Flags: UF_FLAG_VIEWER_DEPENDENT
+	AREATRIGGER_FIELD_EXPLICIT_SCALE = OBJECT_END + 0x5, // Size: 1, Flags: UF_FLAG_PUBLIC, UF_FLAG_URGENT
+	AREATRIGGER_END = OBJECT_END + 0x6
 };
 
 enum ESceneObjectFields
 {
-    SCENE_SCRIPT_PACKAGE_ID                          = 8, // SIZE:1
-    SCENE_RND_SEED_VAL                               = 9, // SIZE:1
-    SCENE_CREATE_BY                                  = 10, // SIZE:2
-    SCENE_TYPE                                       = 12, // SIZE:1
-    SCENE_END                                        = 13
+	SCENE_SCRIPT_PACKAGE_ID = OBJECT_END + 0x0, // Size: 1, Flags: UF_FLAG_PUBLIC
+	SCENE_RND_SEED_VAL = OBJECT_END + 0x1, // Size: 1, Flags: UF_FLAG_PUBLIC
+	SCENE_CREATE_BY = OBJECT_END + 0x2, // Size: 2, Flags: UF_FLAG_PUBLIC
+	SCENE_TYPE = OBJECT_END + 0x4, // Size: 1, Flags: UF_FLAG_PUBLIC
+	SCENE_END = OBJECT_END + 0x5
 };
 
 #endif // _UPDATEFIELDS_H

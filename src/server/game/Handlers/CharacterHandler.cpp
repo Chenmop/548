@@ -226,7 +226,8 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
     ByteBuffer bitBuffer;
     ByteBuffer dataBuffer;
 
-    bitBuffer.WriteBit(1);
+	bitBuffer.WriteBits(0, 21);
+	bitBuffer.WriteBits(result ? result->GetRowCount() : 0, 16);
 
     if (result)
     {
@@ -236,9 +237,6 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
         bitBuffer.reserve(24 * charCount / 8);
         dataBuffer.reserve(charCount * 381);
 
-        bitBuffer.WriteBits(0, 21);
-        bitBuffer.WriteBits(charCount, 16);
-
         do
         {
             uint32 guidLow = (*result)[0].GetUInt32();
@@ -247,17 +245,15 @@ void WorldSession::HandleCharEnum(PreparedQueryResult result)
 
             _allowedCharsToLogin.insert(guidLow);
         } while (result->NextRow());
-        bitBuffer.FlushBits();
     }
-    else
-	{
-        bitBuffer.WriteBits(0, 21);
-        bitBuffer.WriteBits(0, 16);
+
+		bitBuffer.WriteBit(1); // Success
         bitBuffer.FlushBits();
-	}
 
     WorldPacket data(SMSG_CHAR_ENUM, 7 + bitBuffer.size() + dataBuffer.size());
+
     data.append(bitBuffer);
+
     if (charCount)
         data.append(dataBuffer);
 
@@ -284,25 +280,26 @@ void WorldSession::HandleCharEnumOpcode(WorldPacket & /*recvData*/)
 }
 
 void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
-{
-    std::string name;
+{    
     uint8 race_, class_;
     uint8 gender, skin, face, hairStyle, hairColor, facialHair, outfitId;
 
-    recvData >> face;
-    recvData >> gender;
-    recvData >> race_;
-    recvData >> facialHair;
-    recvData >> hairColor;
-    recvData >> outfitId;
-    recvData >> class_;
-    recvData >> skin;
-    recvData >> hairStyle;
+	recvData >> outfitId
+		>> hairStyle 
+		>> class_ 
+		>> skin;
+	recvData >> face
+		>> race_ 
+		>> facialHair 
+		>> gender 
+		>> hairColor;
 
-    recvData.ReadBit();
+	uint32 nameLength = recvData.ReadBits(6);
+	uint8 unk = recvData.ReadBit();
+	std::string name = recvData.ReadString(nameLength);
 
-    uint32 l_NameLenght = recvData.ReadBits(6);
-    name = recvData.ReadString(l_NameLenght);
+	if (unk)
+		recvData.read_skip<uint32>();    
 
     WorldPacket data(SMSG_CHAR_CREATE, 1);                  // returned with diff.values in all cases
 
@@ -715,24 +712,23 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
 {
      ObjectGuid guid;
     
-    guid[3] = recvData.ReadBit();
-    recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
+	 guid[1] = recvData.ReadBit();
+	 guid[3] = recvData.ReadBit();
+	 guid[2] = recvData.ReadBit();
+	 guid[7] = recvData.ReadBit();
+	 guid[4] = recvData.ReadBit();
+	 guid[6] = recvData.ReadBit();
+	 guid[0] = recvData.ReadBit();
+	 guid[5] = recvData.ReadBit();
 
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[5]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[3]);
+	 recvData.ReadByteSeq(guid[7]);
+	 recvData.ReadByteSeq(guid[1]);
+	 recvData.ReadByteSeq(guid[6]);
+	 recvData.ReadByteSeq(guid[0]);
+	 recvData.ReadByteSeq(guid[3]);
+	 recvData.ReadByteSeq(guid[4]);
+	 recvData.ReadByteSeq(guid[2]);
+	 recvData.ReadByteSeq(guid[5]);
 
     // can't delete loaded character
     if (ObjectAccessor::FindPlayer(guid))
@@ -792,7 +788,7 @@ void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
     Player::DeleteFromDB(guid, accountId);
 
     WorldPacket data(SMSG_CHAR_DELETE, 1);
-    data << uint8(CHAR_DELETE_SUCCESS);
+    data << uint8(CHAR_DELETE_SUCCESS + 1);
     SendPacket(&data);
 }
 
@@ -806,28 +802,29 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 
     m_playerLoading = true;
     ObjectGuid playerGuid;
+	float unk = 0;
 
     sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Recvd Player Logon Message");
 
-    recvData.read_skip<float>();
+	recvData >> unk;
 
-    playerGuid[2] = recvData.ReadBit();
-    playerGuid[3] = recvData.ReadBit();
-    playerGuid[7] = recvData.ReadBit();
-    playerGuid[4] = recvData.ReadBit();
-    playerGuid[0] = recvData.ReadBit();
-    playerGuid[1] = recvData.ReadBit();
-    playerGuid[5] = recvData.ReadBit();
-    playerGuid[6] = recvData.ReadBit();
+	playerGuid[1] = recvData.ReadBit();
+	playerGuid[4] = recvData.ReadBit();
+	playerGuid[7] = recvData.ReadBit();
+	playerGuid[3] = recvData.ReadBit();
+	playerGuid[2] = recvData.ReadBit();
+	playerGuid[6] = recvData.ReadBit();
+	playerGuid[5] = recvData.ReadBit();
+	playerGuid[0] = recvData.ReadBit();
 
-    recvData.ReadByteSeq(playerGuid[0]);
-    recvData.ReadByteSeq(playerGuid[1]);
-    recvData.ReadByteSeq(playerGuid[3]);
-    recvData.ReadByteSeq(playerGuid[4]);
-    recvData.ReadByteSeq(playerGuid[7]);
-    recvData.ReadByteSeq(playerGuid[6]);
-    recvData.ReadByteSeq(playerGuid[2]);
-    recvData.ReadByteSeq(playerGuid[5]);
+	recvData.ReadByteSeq(playerGuid[5]);
+	recvData.ReadByteSeq(playerGuid[1]);
+	recvData.ReadByteSeq(playerGuid[0]);
+	recvData.ReadByteSeq(playerGuid[6]);
+	recvData.ReadByteSeq(playerGuid[2]);
+	recvData.ReadByteSeq(playerGuid[4]);
+	recvData.ReadByteSeq(playerGuid[7]);
+	recvData.ReadByteSeq(playerGuid[3]);
 
 
     sLog->outDebug(LOG_FILTER_NETWORKIO, "Character (Guid: %u) (Full guid %llu) logging in", GUID_LOPART(playerGuid), (uint64)playerGuid);
@@ -925,98 +922,92 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
 	//pCurrChar->SendRaidDifficulty(false); // TODO
 
     WorldPacket data(SMSG_LOGIN_VERIFY_WORLD, 20);
-    data << pCurrChar->GetPositionZ();
-    data << pCurrChar->GetMapId();
-    data << pCurrChar->GetPositionX();
-    data << pCurrChar->GetPositionY();
-    data << pCurrChar->GetOrientation();
-    SendPacket(&data);
+	data << pCurrChar->GetPositionX();
+	data << pCurrChar->GetOrientation();
+	data << pCurrChar->GetPositionY();
+	data << pCurrChar->GetMapId();
+	data << pCurrChar->GetPositionZ();
+	SendPacket(&data);
 
     // load player specific part before send times
     LoadAccountData(holder->GetPreparedResult(PLAYER_LOGIN_QUERY_LOAD_ACCOUNT_DATA), PER_CHARACTER_CACHE_MASK);
     SendAccountDataTimes(PER_CHARACTER_CACHE_MASK);
 
-    bool l_QuickTicketThrottleSystem        = true;
-    bool l_CanSendScroolOfResurection       = false;
-    bool l_EnableVoiceChat                          = false;
-    bool l_PlayTimeAlert                            = false;
-    bool l_ItemRestauration                         = false;
-    bool l_CanCrossRealmGroup                       = false;
+	bool feedbackSystem = true;
+	bool excessiveWarning = false;
 
-    data.Initialize(SMSG_FEATURE_SYSTEM_STATUS, 7);    
+	data.Initialize(SMSG_FEATURE_SYSTEM_STATUS, 4 + 4 + 4 + 1 + 4 + 2 + 4 + 4 + 4 + 4 + 4 + 4 + 4);
+	data << uint32(0);                  // Scroll of Resurrection per day?
+	data << uint32(0);                  // Scroll of Resurrection current
+	data << uint32(0);
+	data << uint8(2);
+	data << uint32(0);
 
-	data << uint32(1);                                      // ScroolOfResurection count 1
-    data << uint32(0);                                      // open url by index   
-    data << uint8(2);                                       // Calendar related
-    data << uint32(2);                                      // useless
-    data << uint32(1);                                      // ScroolOfResurection count 2
+	data.WriteBit(1);
+	data.WriteBit(1);                   // ingame shop status (0 - "The Shop is temporarily unavailable.")
+	data.WriteBit(1);
+	data.WriteBit(0);                   // Recruit a Friend button
+	data.WriteBit(0);                   // server supports voice chat
+	data.WriteBit(1);                   // show ingame shop icon
+	data.WriteBit(0);                   // Scroll of Resurrection button
+	data.WriteBit(excessiveWarning);    // excessive play time warning
+	data.WriteBit(0);                   // ingame shop parental control (1 - "Feature has been disabled by Parental Controls.")
+	data.WriteBit(feedbackSystem);      // feedback system (bug, suggestion and report systems)
+	data.FlushBits();
 
-	data.WriteBit(l_PlayTimeAlert);
-    data.WriteBit(1);
-    data.WriteBit(0);
-    data.WriteBit(1);
-    data.WriteBit(l_QuickTicketThrottleSystem);
-    data.WriteBit(1);
-    data.WriteBit(1);
+	if (excessiveWarning)
+	{
+		data << uint32(0);              // excessive play time warning after period(in seconds)
+		data << uint32(0);
+		data << uint32(0);
+	}
 
-    data.FlushBits();
+	if (feedbackSystem)
+	{
+		data << uint32(0);
+		data << uint32(1);
+		data << uint32(10);
+		data << uint32(60000);
+	}
 
-	if (l_PlayTimeAlert)
-    {
-        data << uint32(0);
-        data << uint32(0);
-        data << uint32(0);
-    }
-
-    if (l_QuickTicketThrottleSystem)
-    {
-        data << uint32(60);
-        data << uint32(10);
-        data << uint32(0);
-        data << uint32(1);
-    }
-
-    
-
-    SendPacket(&data);
+	SendPacket(&data);
 
     // Send MOTD
     {
         data.Initialize(SMSG_MOTD, 50);                     // new in 2.0.1
+		data.WriteBits(0, 4);
 
-        uint32 linecount=0;
-        std::string str_motd = sWorld->GetMotd();
-        std::string::size_type pos, nextpos;
-        std::vector<std::string> l_Lines;
+		uint32 linecount = 0;
+		std::string str_motd = sWorld->GetMotd();
+		std::string::size_type pos, nextpos;
+		ByteBuffer stringBuffer;
 
-        pos = 0;
-        while ((nextpos= str_motd.find('@', pos)) != std::string::npos)
-        {
-            if (nextpos != pos)
-            {
-                l_Lines.push_back(str_motd.substr(pos, nextpos-pos));
-                ++linecount;
-            }
-            pos = nextpos+1;
-        }
+		pos = 0;
+		while ((nextpos = str_motd.find('@', pos)) != std::string::npos)
+		{
+			if (nextpos != pos)
+			{
+				std::string string = str_motd.substr(pos, nextpos - pos);
+				data.WriteBits(strlen(string.c_str()), 7);
+				stringBuffer.WriteString(string);
+				++linecount;
+			}
+			pos = nextpos + 1;
+		}
 
-        if (pos<str_motd.length())
-        {
-            l_Lines.push_back(str_motd.substr(pos));
-            ++linecount;
-        }
+		if (pos<str_motd.length())
+		{
+			std::string string = str_motd.substr(pos);
+			data.WriteBits(strlen(string.c_str()), 7);
+			stringBuffer.WriteString(string);
+			++linecount;
+		}
 
-        data.WriteBits(l_Lines.size(), 4);
+		data.PutBits(0, linecount, 4);
+		data.FlushBits();
+		data.append(stringBuffer);
 
-        for (size_t l_I = 0 ; l_I < l_Lines.size() ; l_I++)
-            data.WriteBits(l_Lines[l_I].length(), 7);
-
-        data.FlushBits();
-
-        for (size_t l_I = 0 ; l_I < l_Lines.size() ; l_I++)
-            data.WriteString(l_Lines[l_I]);
-
-        SendPacket(&data);
+		SendPacket(&data);
         sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Sent motd (SMSG_MOTD)");
 
         // send server info
@@ -1047,16 +1038,18 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
     SendPacket(&data);
 
     data.Initialize(SMSG_HOTFIX_INFO);
-    HotfixData const& hotfix = sObjectMgr->GetHotfixData();
-    data.WriteBits(hotfix.size(), 20);
-    data.FlushBits();
-    for (uint32 i = 0; i < hotfix.size(); ++i)
-    {
-        data << uint32(hotfix[i].Type);
-        data << uint32(hotfix[i].Timestamp);
-        data << uint32(hotfix[i].Entry);
-    }
-    SendPacket(&data);
+	HotfixData const& hotfix = sObjectMgr->GetHotfixData();
+	data.WriteBits(hotfix.size(), 20);
+	data.FlushBits();
+
+	for (uint32 i = 0; i < hotfix.size(); ++i)
+	{
+		data << uint32(hotfix[i].Timestamp);
+		data << uint32(hotfix[i].Entry);
+		data << uint32(hotfix[i].Type);
+	}
+
+	SendPacket(&data);
 
     pCurrChar->SendInitialPacketsBeforeAddToMap();
 
@@ -1301,11 +1294,29 @@ void WorldSession::HandleShowingCloakOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleCharRenameOpcode(WorldPacket& recvData)
 {
-    uint64 guid;
-    std::string newName;
+	ObjectGuid guid;
+	std::string unk;
+	std::string newName;
 
-    recvData >> guid;
-    recvData >> newName;
+	guid[6] = recvData.ReadBit();
+	guid[3] = recvData.ReadBit();
+	guid[0] = recvData.ReadBit();
+	recvData >> newName;
+	guid[1] = recvData.ReadBit();
+	guid[5] = recvData.ReadBit();
+	guid[7] = recvData.ReadBit();
+	guid[2] = recvData.ReadBit();
+	guid[4] = recvData.ReadBit();
+
+	recvData.ReadByteSeq(guid[1]);
+	recvData.ReadByteSeq(guid[6]);
+	recvData.ReadByteSeq(guid[5]);
+	recvData >> unk;
+	recvData.ReadByteSeq(guid[2]);
+	recvData.ReadByteSeq(guid[4]);
+	recvData.ReadByteSeq(guid[3]);
+	recvData.ReadByteSeq(guid[7]);
+	recvData.ReadByteSeq(guid[0]);
 
     // prevent character rename to invalid name
     if (!normalizePlayerName(newName))
@@ -1406,219 +1417,98 @@ void WorldSession::HandleChangePlayerNameOpcodeCallBack(PreparedQueryResult resu
 
 void WorldSession::HandleSetPlayerDeclinedNames(WorldPacket& recvData)
 {
-     ObjectGuid guid;
-    std::vector<uint32> DeclinedNamesSize(MAX_DECLINED_NAME_CASES);
-    uint32 Name2Size;
+	ObjectGuid guid;
+	uint32 nameLength[MAX_DECLINED_NAME_CASES];
 
-    std::string name2;
-    DeclinedName declinedname;
+	guid[0] = recvData.ReadBit();
+	guid[2] = recvData.ReadBit();
+	guid[1] = recvData.ReadBit();
+	guid[7] = recvData.ReadBit();
+	guid[5] = recvData.ReadBit();
+	guid[6] = recvData.ReadBit();
+	guid[4] = recvData.ReadBit();
+	guid[3] = recvData.ReadBit();
 
-    guid[7] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
+	for (uint32 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
+	{
+		nameLength[i] = recvData.ReadBits(7);
+	}
 
-    for (int i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
-    {
-        DeclinedNamesSize[i] = recvData.ReadBits(7);
-    }
+	DeclinedName declinedname;
 
-    guid[2] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    Name2Size = recvData.ReadBits(7);
-    guid[3] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
+	for (uint32 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
+	{
+		declinedname.name[i] = recvData.ReadString(nameLength[i]);
+		if (!normalizePlayerName(declinedname.name[i]))
+		{
+			recvData.rfinish();
+			WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 1 + 1 + 4);
+			data.WriteBit(1);
+			data.WriteBits(0, 8);
+			data.FlushBits();
+			data << uint32(1);
+			SendPacket(&data);
+			return;
+		}
+	}
 
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[1]);
+	recvData.FlushBits();
 
-    for (int i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
-    {
-        declinedname.name[i] = recvData.ReadString(DeclinedNamesSize[i]);
+	recvData.ReadByteSeq(guid[0]);
+	recvData.ReadByteSeq(guid[7]);
+	recvData.ReadByteSeq(guid[3]);
+	recvData.ReadByteSeq(guid[6]);
+	recvData.ReadByteSeq(guid[4]);
+	recvData.ReadByteSeq(guid[2]);
+	recvData.ReadByteSeq(guid[1]);
+	recvData.ReadByteSeq(guid[5]);
 
-        if (!normalizePlayerName(declinedname.name[i]))
-        {
-            WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4+8);
-            data << uint32(1);
+	// not accept declined names for unsupported languages
+	std::string name;
+	if (!sObjectMgr->GetPlayerNameByGUID(guid, name))
+	{
+		WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 1 + 1 + 4);
+		data.WriteBit(1);
+		data.WriteBits(0, 8);
+		data.FlushBits();
+		data << uint32(1);
+		SendPacket(&data);
+		return;
+	}
 
-            ObjectGuid l_WritedGuid = guid;
-            data.WriteBit(0);
-            data.WriteBit(l_WritedGuid[1]);
-            data.WriteBit(l_WritedGuid[7]);
-            data.WriteBit(l_WritedGuid[2]);
-            data.WriteBit(l_WritedGuid[3]);
-            data.WriteBit(l_WritedGuid[4]);
-            data.WriteBit(l_WritedGuid[6]);
-            data.WriteBit(l_WritedGuid[0]);
-            data.WriteBit(l_WritedGuid[5]);
-            data.FlushBits();
+	std::wstring wname;
+	if (!Utf8toWStr(name, wname))
+	{
+		WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4 + 8);
+		data.WriteBit(1);
+		data.WriteBits(0, 8);
+		data.FlushBits();
+		data << uint32(1);
+		SendPacket(&data);
+		return;
+	}
 
-            data.WriteByteSeq(l_WritedGuid[2]);
-            data.WriteByteSeq(l_WritedGuid[7]);
-            data.WriteByteSeq(l_WritedGuid[4]);
-            data.WriteByteSeq(l_WritedGuid[1]);
-            data.WriteByteSeq(l_WritedGuid[6]);
-            data.WriteByteSeq(l_WritedGuid[0]);
-            data.WriteByteSeq(l_WritedGuid[5]);
-            data.WriteByteSeq(l_WritedGuid[3]);
+	if (!isCyrillicCharacter(wname[0]))                      // name already stored as only single alphabet using
+	{
+		WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4 + 8);
+		data.WriteBit(1);
+		data.WriteBits(0, 8);
+		data.FlushBits();
+		data << uint32(1);
+		SendPacket(&data);
+		return;
+	}
 
-            SendPacket(&data);
-            return;
-        }
-    }
-
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[0]);
-    name2 = recvData.ReadString(Name2Size);
-    recvData.ReadByteSeq(guid[5]);
-
-    // not accept declined names for unsupported languages
-    std::string name;
-    if (!sObjectMgr->GetPlayerNameByGUID(guid, name))
-    {
-        WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4+8);
-        data << uint32(1);
-        ObjectGuid l_WritedGuid = guid;
-        data.WriteBit(0);
-        data.WriteBit(l_WritedGuid[1]);
-        data.WriteBit(l_WritedGuid[7]);
-        data.WriteBit(l_WritedGuid[2]);
-        data.WriteBit(l_WritedGuid[3]);
-        data.WriteBit(l_WritedGuid[4]);
-        data.WriteBit(l_WritedGuid[6]);
-        data.WriteBit(l_WritedGuid[0]);
-        data.WriteBit(l_WritedGuid[5]);
-        data.FlushBits();
-
-        data.WriteByteSeq(l_WritedGuid[2]);
-        data.WriteByteSeq(l_WritedGuid[7]);
-        data.WriteByteSeq(l_WritedGuid[4]);
-        data.WriteByteSeq(l_WritedGuid[1]);
-        data.WriteByteSeq(l_WritedGuid[6]);
-        data.WriteByteSeq(l_WritedGuid[0]);
-        data.WriteByteSeq(l_WritedGuid[5]);
-        data.WriteByteSeq(l_WritedGuid[3]);
-        SendPacket(&data);
-        return;
-    }
-
-    std::wstring wname;
-    if (!Utf8toWStr(name, wname))
-    {
-        WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4+8);
-        data << uint32(1);
-        ObjectGuid l_WritedGuid = guid;
-        data.WriteBit(0);
-        data.WriteBit(l_WritedGuid[1]);
-        data.WriteBit(l_WritedGuid[7]);
-        data.WriteBit(l_WritedGuid[2]);
-        data.WriteBit(l_WritedGuid[3]);
-        data.WriteBit(l_WritedGuid[4]);
-        data.WriteBit(l_WritedGuid[6]);
-        data.WriteBit(l_WritedGuid[0]);
-        data.WriteBit(l_WritedGuid[5]);
-        data.FlushBits();
-
-        data.WriteByteSeq(l_WritedGuid[2]);
-        data.WriteByteSeq(l_WritedGuid[7]);
-        data.WriteByteSeq(l_WritedGuid[4]);
-        data.WriteByteSeq(l_WritedGuid[1]);
-        data.WriteByteSeq(l_WritedGuid[6]);
-        data.WriteByteSeq(l_WritedGuid[0]);
-        data.WriteByteSeq(l_WritedGuid[5]);
-        data.WriteByteSeq(l_WritedGuid[3]);
-        SendPacket(&data);
-        return;
-    }
-
-    if (!isCyrillicCharacter(wname[0]))                      // name already stored as only single alphabet using
-    {
-        WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4+8);
-        data << uint32(1);
-        ObjectGuid l_WritedGuid = guid;
-        data.WriteBit(0);
-        data.WriteBit(l_WritedGuid[1]);
-        data.WriteBit(l_WritedGuid[7]);
-        data.WriteBit(l_WritedGuid[2]);
-        data.WriteBit(l_WritedGuid[3]);
-        data.WriteBit(l_WritedGuid[4]);
-        data.WriteBit(l_WritedGuid[6]);
-        data.WriteBit(l_WritedGuid[0]);
-        data.WriteBit(l_WritedGuid[5]);
-        data.FlushBits();
-
-        data.WriteByteSeq(l_WritedGuid[2]);
-        data.WriteByteSeq(l_WritedGuid[7]);
-        data.WriteByteSeq(l_WritedGuid[4]);
-        data.WriteByteSeq(l_WritedGuid[1]);
-        data.WriteByteSeq(l_WritedGuid[6]);
-        data.WriteByteSeq(l_WritedGuid[0]);
-        data.WriteByteSeq(l_WritedGuid[5]);
-        data.WriteByteSeq(l_WritedGuid[3]);
-        SendPacket(&data);
-        return;
-    }
-
-
-    if (name2 != name)                                       // character have different name
-    {
-        WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4+8);
-        data << uint32(1);
-        ObjectGuid l_WritedGuid = guid;
-        data.WriteBit(0);
-        data.WriteBit(l_WritedGuid[1]);
-        data.WriteBit(l_WritedGuid[7]);
-        data.WriteBit(l_WritedGuid[2]);
-        data.WriteBit(l_WritedGuid[3]);
-        data.WriteBit(l_WritedGuid[4]);
-        data.WriteBit(l_WritedGuid[6]);
-        data.WriteBit(l_WritedGuid[0]);
-        data.WriteBit(l_WritedGuid[5]);
-        data.FlushBits();
-
-        data.WriteByteSeq(l_WritedGuid[2]);
-        data.WriteByteSeq(l_WritedGuid[7]);
-        data.WriteByteSeq(l_WritedGuid[4]);
-        data.WriteByteSeq(l_WritedGuid[1]);
-        data.WriteByteSeq(l_WritedGuid[6]);
-        data.WriteByteSeq(l_WritedGuid[0]);
-        data.WriteByteSeq(l_WritedGuid[5]);
-        data.WriteByteSeq(l_WritedGuid[3]);
-        SendPacket(&data);
-        return;
-    }
-
-
-    if (!ObjectMgr::CheckDeclinedNames(wname, declinedname))
-    {
-        WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4+8);
-        data << uint32(1);
-        ObjectGuid l_WritedGuid = guid;
-        data.WriteBit(0);
-        data.WriteBit(l_WritedGuid[1]);
-        data.WriteBit(l_WritedGuid[7]);
-        data.WriteBit(l_WritedGuid[2]);
-        data.WriteBit(l_WritedGuid[3]);
-        data.WriteBit(l_WritedGuid[4]);
-        data.WriteBit(l_WritedGuid[6]);
-        data.WriteBit(l_WritedGuid[0]);
-        data.WriteBit(l_WritedGuid[5]);
-        data.FlushBits();
-
-        data.WriteByteSeq(l_WritedGuid[2]);
-        data.WriteByteSeq(l_WritedGuid[7]);
-        data.WriteByteSeq(l_WritedGuid[4]);
-        data.WriteByteSeq(l_WritedGuid[1]);
-        data.WriteByteSeq(l_WritedGuid[6]);
-        data.WriteByteSeq(l_WritedGuid[0]);
-        data.WriteByteSeq(l_WritedGuid[5]);
-        data.WriteByteSeq(l_WritedGuid[3]);
-        SendPacket(&data);
-        return;
-    }
+	if (!ObjectMgr::CheckDeclinedNames(wname, declinedname))
+	{
+		WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 1 + 1 + 4);
+		data.WriteBit(1);
+		data.WriteBits(0, 8);
+		data.FlushBits();
+		data << uint32(1);
+		SendPacket(&data);
+		return;
+	}
 
     for (int i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
         CharacterDatabase.EscapeString(declinedname.name[i]);
@@ -1640,9 +1530,29 @@ void WorldSession::HandleSetPlayerDeclinedNames(WorldPacket& recvData)
     CharacterDatabase.CommitTransaction(trans);
 
     WorldPacket data(SMSG_SET_PLAYER_DECLINED_NAMES_RESULT, 4+8);
-    data << uint32(0);                                      // OK
-    data << uint64(guid);
-    SendPacket(&data);
+	data.WriteBit(0);
+	data.WriteBit(guid[2]);
+	data.WriteBit(guid[0]);
+	data.WriteBit(guid[3]);
+	data.WriteBit(guid[1]);
+	data.WriteBit(guid[4]);
+	data.WriteBit(guid[6]);
+	data.WriteBit(guid[5]);
+	data.WriteBit(guid[7]);
+
+	data.FlushBits();
+
+	data.WriteByteSeq(guid[2]);
+	data.WriteByteSeq(guid[7]);
+	data.WriteByteSeq(guid[1]);
+	data.WriteByteSeq(guid[0]);
+	data.WriteByteSeq(guid[4]);
+	data.WriteByteSeq(guid[3]);
+	data.WriteByteSeq(guid[6]);
+	data.WriteByteSeq(guid[5]);
+	data << uint32(0);                                      // OK
+
+	SendPacket(&data);
 }
 
 void WorldSession::HandleAlterAppearance(WorldPacket& recvData)
@@ -1741,14 +1651,32 @@ void WorldSession::HandleRemoveGlyph(WorldPacket& recvData)
 
 void WorldSession::HandleCharCustomize(WorldPacket& recvData)
 {
-    uint64 guid;
-    std::string newName;
+	ObjectGuid guid;
+	std::string newName;
+	std::string unk;
+	uint8 gender, skin, face, hairStyle, hairColor, facialHair;
 
-    recvData >> guid;
-    recvData >> newName;
+	recvData >> gender >> skin >> hairColor >> hairStyle >> facialHair >> face;
 
-    uint8 gender, skin, face, hairStyle, hairColor, facialHair;
-    recvData >> gender >> skin >> hairColor >> hairStyle >> facialHair >> face;
+	guid[2] = recvData.ReadBit();
+	guid[6] = recvData.ReadBit();
+	guid[1] = recvData.ReadBit();
+	guid[0] = recvData.ReadBit();
+	guid[7] = recvData.ReadBit();
+	guid[5] = recvData.ReadBit();
+	recvData >> newName;
+	guid[4] = recvData.ReadBit();
+	guid[3] = recvData.ReadBit();
+
+	recvData.ReadByteSeq(guid[4]);
+	recvData >> unk;
+	recvData.ReadByteSeq(guid[0]);
+	recvData.ReadByteSeq(guid[2]);
+	recvData.ReadByteSeq(guid[6]);
+	recvData.ReadByteSeq(guid[5]);
+	recvData.ReadByteSeq(guid[3]);
+	recvData.ReadByteSeq(guid[1]);
+	recvData.ReadByteSeq(guid[7]);
 
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHARACTER_AT_LOGIN);
     stmt->setUInt32(0, GUID_LOPART(guid));

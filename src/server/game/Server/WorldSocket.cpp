@@ -874,42 +874,44 @@ int WorldSocket::HandleAuthSession(WorldPacket& recvPacket)
     BigNumber k;
     WorldPacket addonsData;
 
-    recvPacket.read_skip<uint32>();
-    recvPacket >> digest[4];
-    recvPacket.read_skip<uint32>();
-    recvPacket.read_skip<uint8>();
-    recvPacket >> digest[19];
-    recvPacket >> digest[12];
-    recvPacket >> digest[9];
-    recvPacket >> digest[6];
-    recvPacket >> digest[18];
-    recvPacket >> digest[17];
-    recvPacket >> digest[8];
-    recvPacket >> digest[13];
-    recvPacket >> digest[1];
-    recvPacket >> digest[10];
-    recvPacket >> digest[11];
-    recvPacket >> digest[15];
-    recvPacket.read_skip<uint32>();
-    recvPacket >> digest[3];
-    recvPacket >> digest[14];
-    recvPacket >> digest[7];
-    recvPacket.read_skip<uint64>();
-    recvPacket.read_skip<uint8>();
-    recvPacket.read_skip<uint32>();
-    recvPacket >> digest[5];
-    recvPacket >> digest[0];
-    recvPacket >> clientBuild;
-    recvPacket >> digest[16];
-    recvPacket >> digest[2];
-    recvPacket.read_skip<uint32>();
-    recvPacket >> addonSize;
+	recvPacket.read_skip<uint32>();
+	recvPacket.read_skip<uint32>();
+	recvPacket >> digest[18];
+	recvPacket >> digest[14];
+	recvPacket >> digest[3];
+	recvPacket >> digest[4];
+	recvPacket >> digest[0];
+	recvPacket.read_skip<uint32>();
+	recvPacket >> digest[11];
+	recvPacket >> clientSeed;
+	recvPacket >> digest[19];
+	recvPacket.read_skip<uint8>();
+	recvPacket.read_skip<uint8>();
+	recvPacket >> digest[2];
+	recvPacket >> digest[9];
+	recvPacket >> digest[12];
+	recvPacket.read_skip<uint64>();
+	recvPacket.read_skip<uint32>();
+	recvPacket >> digest[16];
+	recvPacket >> digest[5];
+	recvPacket >> digest[6];
+	recvPacket >> digest[8];
+	recvPacket >> clientBuild;
+	recvPacket >> digest[17];
+	recvPacket >> digest[7];
+	recvPacket >> digest[13];
+	recvPacket >> digest[15];
+	recvPacket >> digest[1];
+	recvPacket >> digest[10];
+	recvPacket >> addonSize;
 
     addonsData.resize(addonSize);
     recvPacket.read((uint8*)addonsData.contents(), addonSize);
 
+	recvPacket.ReadBit();
+
     uint32 accountNameLength = recvPacket.ReadBits(11);
-    recvPacket.ReadBit();
+    
     account = recvPacket.ReadString(accountNameLength);
 
     if (sWorld->IsClosed())

@@ -2807,76 +2807,76 @@ MovementStatusElements const* GetMovementStatusElementsSequence(Opcodes opcode)
 {
     switch (opcode)
     {
-    case CMSG_MOVE_FALL_RESET:
-        return MovementFallResetSequence;
-    case MSG_MOVE_FALL_LAND:
-        return MovementFallLandSequence;
-    case MSG_MOVE_HEARTBEAT:
-        return MovementHeartBeatSequence;
-    case MSG_MOVE_JUMP:
-        return MovementJumpSequence;
-    case MSG_MOVE_SET_FACING:
-        return MovementSetFacingSequence;
-    case MSG_MOVE_SET_PITCH:
-        return MovementSetPitchSequence;
-    case MSG_MOVE_START_ASCEND:
-        return MovementStartAscendSequence;
-    case MSG_MOVE_START_BACKWARD:
-        return MovementStartBackwardSequence;
-    case MSG_MOVE_START_DESCEND:
-        return MovementStartDescendSequence;
-    case MSG_MOVE_START_FORWARD:
-        return MovementStartForwardSequence;
-    case MSG_MOVE_START_PITCH_DOWN:
-        return MovementStartPitchDownSequence;
-    case MSG_MOVE_START_PITCH_UP:
-        return MovementStartPitchUpSequence;
-    case MSG_MOVE_START_STRAFE_LEFT:
-        return MovementStartStrafeLeftSequence;
-    case MSG_MOVE_START_STRAFE_RIGHT:
-        return MovementStartStrafeRightSequence;
-    case MSG_MOVE_START_SWIM:
-        return MovementStartSwimSequence;
-    case MSG_MOVE_START_TURN_LEFT:
-        return MovementStartTurnLeftSequence;
-    case MSG_MOVE_START_TURN_RIGHT:
-        return MovementStartTurnRightSequence;
-    case MSG_MOVE_STOP:
-        return MovementStopSequence;
-    case MSG_MOVE_STOP_ASCEND:
-        return MovementStopAscendSequence;
-    case MSG_MOVE_STOP_PITCH:
-        return MovementStopPitchSequence;
-    case MSG_MOVE_STOP_STRAFE:
-        return MovementStopStrafeSequence;
-    case MSG_MOVE_STOP_SWIM:
-        return MovementStopSwimSequence;
-    case MSG_MOVE_STOP_TURN:
-        return MovementStopTurnSequence;
-    case SMSG_PLAYER_MOVE:
-        return PlayerMoveSequence;
-    case CMSG_MOVE_CHNG_TRANSPORT:
-        return MoveChngTransport;
-    case CMSG_MOVE_SPLINE_DONE:
-        return MoveSplineDone;
+    //case CMSG_MOVE_FALL_RESET:
+    //    return MovementFallResetSequence;
+    //case MSG_MOVE_FALL_LAND:
+    //    return MovementFallLandSequence;
+   // case MSG_MOVE_HEARTBEAT:
+    //    return MovementHeartBeatSequence;
+    //case MSG_MOVE_JUMP:
+    //    return MovementJumpSequence;
+    //case MSG_MOVE_SET_FACING:
+    //    return MovementSetFacingSequence;
+   // case MSG_MOVE_SET_PITCH:
+    //    return MovementSetPitchSequence;
+    //case MSG_MOVE_START_ASCEND:
+    //    return MovementStartAscendSequence;
+    //case MSG_MOVE_START_BACKWARD:
+     //   return MovementStartBackwardSequence;
+    //case MSG_MOVE_START_DESCEND:
+     //   return MovementStartDescendSequence;
+    //case MSG_MOVE_START_FORWARD:
+     //   return MovementStartForwardSequence;
+    //case MSG_MOVE_START_PITCH_DOWN:
+    //    return MovementStartPitchDownSequence;
+    //case MSG_MOVE_START_PITCH_UP:
+    //    return MovementStartPitchUpSequence;
+    //case MSG_MOVE_START_STRAFE_LEFT:
+    //    return MovementStartStrafeLeftSequence;
+    //case MSG_MOVE_START_STRAFE_RIGHT:
+    //    return MovementStartStrafeRightSequence;
+    //case MSG_MOVE_START_SWIM:
+    //    return MovementStartSwimSequence;
+   // case MSG_MOVE_START_TURN_LEFT:
+     //   return MovementStartTurnLeftSequence;
+    //case MSG_MOVE_START_TURN_RIGHT:
+    //    return MovementStartTurnRightSequence;
+    //case MSG_MOVE_STOP:
+    //    return MovementStopSequence;
+   // case MSG_MOVE_STOP_ASCEND:
+    //    return MovementStopAscendSequence;
+   // case MSG_MOVE_STOP_PITCH:
+    //    return MovementStopPitchSequence;
+    //case MSG_MOVE_STOP_STRAFE:
+    //    return MovementStopStrafeSequence;
+   // case MSG_MOVE_STOP_SWIM:
+    //    return MovementStopSwimSequence;
+    //case MSG_MOVE_STOP_TURN:
+    //    return MovementStopTurnSequence;
+    //case SMSG_PLAYER_MOVE:
+    //    return PlayerMoveSequence;
+    //case CMSG_MOVE_CHNG_TRANSPORT:
+     //   return MoveChngTransport;
+    //case CMSG_MOVE_SPLINE_DONE:
+    //    return MoveSplineDone;
     //case CMSG_MOVE_NOT_ACTIVE_MOVER:
         //return MoveNotActiveMover;
-	case SMSG_MOVE_SET_CAN_FLY:
-            return MoveSetCanFly;
-    case SMSG_MOVE_UNSET_CAN_FLY:
-            return MoveUnsetCanFly;
+	//case SMSG_MOVE_SET_CAN_FLY:
+     //       return MoveSetCanFly;
+    //case SMSG_MOVE_UNSET_CAN_FLY:
+     //       return MoveUnsetCanFly;
     //case CMSG_DISMISS_CONTROLLED_VEHICLE:
         //return DismissControlledVehicle;
-    case SMSG_MOVE_UPDATE_TELEPORT:
-        return MoveUpdateTeleport;
-	case CMSG_CAST_SPELL:
-		return MoveCastSpell;
-	case SMSG_MOVE_SET_FLIGHT_SPEED:
-         return MoveSetFlightSpeed;
-	case SMSG_MOVE_SET_RUN_SPEED:
-        return MoveSetRunSpeed;
-	case SMSG_MOVE_SET_SWIM_SPEED: // Still need more
-        return MoveSetSwimSpeed;
+    //case SMSG_MOVE_UPDATE_TELEPORT:
+    //    return MoveUpdateTeleport;
+	//case CMSG_CAST_SPELL:
+	//	return MoveCastSpell;
+	//case SMSG_MOVE_SET_FLIGHT_SPEED:
+   //      return MoveSetFlightSpeed;
+	//case SMSG_MOVE_SET_RUN_SPEED:
+     //   return MoveSetRunSpeed;
+	//case SMSG_MOVE_SET_SWIM_SPEED: // Still need more
+    //    return MoveSetSwimSpeed;
     default:
         break;
     }

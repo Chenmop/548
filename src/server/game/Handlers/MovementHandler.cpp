@@ -198,23 +198,23 @@ void WorldSession::HandleMoveTeleportAck(WorldPacket& recvPacket)
     uint32 flags, time;
     recvPacket >> flags >> time; 
 
-    guid[3] = recvPacket.ReadBit();
-    guid[4] = recvPacket.ReadBit();
-    guid[7] = recvPacket.ReadBit();
-    guid[2] = recvPacket.ReadBit();
-    guid[5] = recvPacket.ReadBit();
-    guid[1] = recvPacket.ReadBit();
-    guid[6] = recvPacket.ReadBit();
-    guid[0] = recvPacket.ReadBit();
+	guid[0] = recvPacket.ReadBit();
+	guid[7] = recvPacket.ReadBit();
+	guid[3] = recvPacket.ReadBit();
+	guid[5] = recvPacket.ReadBit();
+	guid[4] = recvPacket.ReadBit();
+	guid[6] = recvPacket.ReadBit();
+	guid[1] = recvPacket.ReadBit();
+	guid[2] = recvPacket.ReadBit();
 
-    recvPacket.ReadByteSeq(guid[0]);
-    recvPacket.ReadByteSeq(guid[6]);
-    recvPacket.ReadByteSeq(guid[5]);
-    recvPacket.ReadByteSeq(guid[3]);
-    recvPacket.ReadByteSeq(guid[7]);
-    recvPacket.ReadByteSeq(guid[1]);
-    recvPacket.ReadByteSeq(guid[2]);
-    recvPacket.ReadByteSeq(guid[4]);
+	recvPacket.ReadByteSeq(guid[4]);
+	recvPacket.ReadByteSeq(guid[1]);
+	recvPacket.ReadByteSeq(guid[6]);
+	recvPacket.ReadByteSeq(guid[7]);
+	recvPacket.ReadByteSeq(guid[0]);
+	recvPacket.ReadByteSeq(guid[2]);
+	recvPacket.ReadByteSeq(guid[5]);
+	recvPacket.ReadByteSeq(guid[3]);
 
     sLog->outDebug(LOG_FILTER_NETWORKIO, "Guid " UI64FMTD, uint64(guid));
     sLog->outDebug(LOG_FILTER_NETWORKIO, "Flags %u, time %u", flags, time/IN_MILLISECONDS);
@@ -454,13 +454,13 @@ void WorldSession::HandleForceSpeedChangeAck(WorldPacket &recvData)
     {
         case CMSG_MOVE_FORCE_WALK_SPEED_CHANGE_ACK:          move_type = MOVE_WALK;          force_move_type = MOVE_WALK;        break;
         //case CMSG_MOVE_FORCE_RUN_SPEED_CHANGE_ACK:           move_type = MOVE_RUN;           force_move_type = MOVE_RUN;         break;
-       // case CMSG_MOVE_FORCE_RUN_BACK_SPEED_CHANGE_ACK:      move_type = MOVE_RUN_BACK;      force_move_type = MOVE_RUN_BACK;    break;
+        //case CMSG_MOVE_FORCE_RUN_BACK_SPEED_CHANGE_ACK:      move_type = MOVE_RUN_BACK;      force_move_type = MOVE_RUN_BACK;    break;
         //case CMSG_MOVE_FORCE_SWIM_SPEED_CHANGE_ACK:          move_type = MOVE_SWIM;          force_move_type = MOVE_SWIM;        break;
         //case CMSG_MOVE_FORCE_SWIM_BACK_SPEED_CHANGE_ACK:     move_type = MOVE_SWIM_BACK;     force_move_type = MOVE_SWIM_BACK;   break;
         //case CMSG_MOVE_FORCE_TURN_RATE_CHANGE_ACK:           move_type = MOVE_TURN_RATE;     force_move_type = MOVE_TURN_RATE;   break;
         //case CMSG_MOVE_FORCE_FLIGHT_SPEED_CHANGE_ACK:        move_type = MOVE_FLIGHT;        force_move_type = MOVE_FLIGHT;      break;
         //case CMSG_MOVE_FORCE_FLIGHT_BACK_SPEED_CHANGE_ACK:   move_type = MOVE_FLIGHT_BACK;   force_move_type = MOVE_FLIGHT_BACK; break;
-       // case CMSG_MOVE_FORCE_PITCH_RATE_CHANGE_ACK:          move_type = MOVE_PITCH_RATE;    force_move_type = MOVE_PITCH_RATE;  break;
+        //case CMSG_MOVE_FORCE_PITCH_RATE_CHANGE_ACK:          move_type = MOVE_PITCH_RATE;    force_move_type = MOVE_PITCH_RATE;  break;
         default:
             sLog->outError(LOG_FILTER_NETWORKIO, "WorldSession::HandleForceSpeedChangeAck: Unknown move type opcode: %u", opcode);
             return;
@@ -502,23 +502,23 @@ void WorldSession::HandleSetActiveMoverOpcode(WorldPacket& recvPacket)
     ObjectGuid guid;   
 
     recvPacket.ReadBit();
-    guid[4] = recvPacket.ReadBit();
-    guid[7] = recvPacket.ReadBit();
-    guid[6] = recvPacket.ReadBit();
-    guid[0] = recvPacket.ReadBit();
-    guid[5] = recvPacket.ReadBit();
-    guid[3] = recvPacket.ReadBit();
-    guid[1] = recvPacket.ReadBit();
-    guid[2] = recvPacket.ReadBit();
+	guid[3] = recvPacket.ReadBit();
+	guid[0] = recvPacket.ReadBit();
+	guid[2] = recvPacket.ReadBit();
+	guid[1] = recvPacket.ReadBit();
+	guid[5] = recvPacket.ReadBit();
+	guid[4] = recvPacket.ReadBit();
+	guid[7] = recvPacket.ReadBit();
+	guid[6] = recvPacket.ReadBit();
 
-    recvPacket.ReadByteSeq(guid[7]);
-    recvPacket.ReadByteSeq(guid[0]);
-    recvPacket.ReadByteSeq(guid[3]);
-    recvPacket.ReadByteSeq(guid[6]);
-    recvPacket.ReadByteSeq(guid[5]);
-    recvPacket.ReadByteSeq(guid[2]);
-    recvPacket.ReadByteSeq(guid[4]);
-    recvPacket.ReadByteSeq(guid[1]);
+	recvPacket.ReadByteSeq(guid[3]);
+	recvPacket.ReadByteSeq(guid[4]);
+	recvPacket.ReadByteSeq(guid[5]);
+	recvPacket.ReadByteSeq(guid[2]);
+	recvPacket.ReadByteSeq(guid[7]);
+	recvPacket.ReadByteSeq(guid[0]);
+	recvPacket.ReadByteSeq(guid[1]);
+	recvPacket.ReadByteSeq(guid[6]);
 
     if (GetPlayer()->IsInWorld())
     {
