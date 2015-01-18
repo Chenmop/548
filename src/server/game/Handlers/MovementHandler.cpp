@@ -502,6 +502,7 @@ void WorldSession::HandleSetActiveMoverOpcode(WorldPacket& recvPacket)
     ObjectGuid guid;   
 
     recvPacket.ReadBit();
+
 	guid[3] = recvPacket.ReadBit();
 	guid[0] = recvPacket.ReadBit();
 	guid[2] = recvPacket.ReadBit();

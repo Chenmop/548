@@ -153,14 +153,15 @@ uint32 ReputationMgr::GetDefaultStateFlags(FactionEntry const* factionEntry) con
 
 void ReputationMgr::SendForceReactions()
 {
-    WorldPacket data;
-    data.Initialize(SMSG_SET_FORCED_REACTIONS, 4+_forcedReactions.size()*(4+4));
-    data << uint32(_forcedReactions.size());
-    for (ForcedReactions::const_iterator itr = _forcedReactions.begin(); itr != _forcedReactions.end(); ++itr)
-    {
-        data << uint32(itr->first);                         // faction_id (Faction.dbc)
-        data << uint32(itr->second);                        // reputation rank
-    }
+	WorldPacket data(SMSG_SET_FORCED_REACTIONS, 1 + _forcedReactions.size() * (4 + 4));
+	data.WriteBits(_forcedReactions.size(), 6);
+	data.FlushBits();
+
+	for (ForcedReactions::const_iterator itr = _forcedReactions.begin(); itr != _forcedReactions.end(); ++itr)
+	{
+		data << uint32(itr->first);                         // faction_id (Faction.dbc)
+		data << uint32(itr->second);                        // reputation rank
+	}
     _player->SendDirectMessage(&data);
 }
 
@@ -200,42 +201,44 @@ void ReputationMgr::SendState(FactionState const* faction)
 
 void ReputationMgr::SendInitialReputations()
 {
-    uint16 count = 256;
-    WorldPacket data(SMSG_INITIALIZE_FACTIONS, (256 * (4 + 1)) + (256 / 8));
-    ByteBuffer buffer(256 / 8);
+	uint16 count = 256;
+	RepListID a = 0;
+	ByteBuffer bitData;
 
-    RepListID a = 0;
+	WorldPacket data(SMSG_INITIALIZE_FACTIONS, (count * (1 + 4)) + 32);
 
-    for (FactionStateList::iterator itr = _factions.begin(); itr != _factions.end(); ++itr)
-    {
-        // fill in absent fields
-        for (; a != itr->first; ++a)
-        {
-            data << uint32(0);
-            data << uint8(0);
-            buffer.WriteBit(0); // bonus
-        }
+	for (FactionStateList::iterator itr = _factions.begin(); itr != _factions.end(); ++itr)
+	{
+		// fill in absent fields
+		for (; a != itr->first; ++a)
+		{
+			data << uint8(0);
+			data << uint32(0);
+			bitData.WriteBit(0);
+		}
 
-        // fill in encountered data
-        data << uint32(itr->second.Standing);
-        data << uint8(itr->second.Flags);
-        buffer.WriteBit(0); // bonus
-        itr->second.needSend = false;
+		// fill in encountered data
+		data << uint8(itr->second.Flags);
+		data << uint32(itr->second.Standing);
 
-        ++a;
-    }
+		// Bonus reputation (Your account has unlocked bonus reputation gain with this faction.)
+		bitData.WriteBit(0);
 
-    // fill in absent fields
-    for (; a != count; ++a)
-    {
-        data << uint8(0);
-        data << uint32(0);
-        buffer.WriteBit(0); // bonus
-    }
+		itr->second.needSend = false;
 
-    buffer.FlushBits();
+		++a;
+	}
 
-    data.append(buffer);
+	// fill in absent fields
+	for (; a != count; ++a)
+	{
+		data << uint8(0);
+		data << uint32(0);
+		bitData.WriteBit(0);
+	}
+
+	bitData.FlushBits();
+	data.append(bitData);
 
     _player->SendDirectMessage(&data);
 }

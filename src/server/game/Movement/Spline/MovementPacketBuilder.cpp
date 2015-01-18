@@ -68,322 +68,203 @@ namespace Movement
 
     void PacketBuilder::WriteCommonMonsterMovePart(const MoveSpline& p_MoveSpline, ObjectGuid p_CreatureGuid, ObjectGuid p_TransportGuid, WorldPacket& p_Data)
     {
-        //////////////////////////////////////////////////////////////////////////
-        /// Hack for cyclic movement / add fake Enter_Cycle flag - needed for client-side cyclic movement (client will erase first spline vertex after first cycle done)
-        //////////////////////////////////////////////////////////////////////////
+		ObjectGuid guid = p_CreatureGuid;
+		ObjectGuid transport = p_TransportGuid;
+		MoveSplineFlag l_SplineFlags = p_MoveSpline.splineflags;
+		l_SplineFlags.enter_cycle = p_MoveSpline.isCyclic();
 
-        MoveSplineFlag l_SplineFlags    = p_MoveSpline.splineflags;
-        l_SplineFlags.enter_cycle       = p_MoveSpline.isCyclic();
+		MonsterMoveType l_MoveType = SplineFlagsToMonsterMoveType(l_SplineFlags);
+		G3D::Vector3 const& firstPoint = p_MoveSpline.spline.getPoint(p_MoveSpline.spline.first());
 
-        //////////////////////////////////////////////////////////////////////////
-        /// Compute path nodes and header position
-        //////////////////////////////////////////////////////////////////////////
+		p_Data << float(firstPoint.z);
+		p_Data << float(firstPoint.x);
+		p_Data << uint32(p_MoveSpline.GetId());
+		p_Data << float(firstPoint.y);
+		p_Data << float(0.f); // Most likely transport Y
+		p_Data << float(0.f); // Most likely transport Z
+		p_Data << float(0.f); // Most likely transport X
 
-        uint32              l_PathCount         = 0;
-        uint32              l_SplineSplineOff   = 0;
-        Movement::Location  l_Position          = Movement::Location(0, 0, 0, 0);
-        Movement::Location  l_Origin            = Movement::Location(0, 0, 0, 0);
+		p_Data.WriteBit(1); // Parabolic speed // esi+4Ch
+		p_Data.WriteBit(guid[0]);
+		p_Data.WriteBits(l_MoveType, 3);
 
-        Movement::SplineBase::ControlArray l_Path;
-        
-        Player* l_Player = 0;
+		if (l_MoveType == MonsterMoveFacingTarget)
+		{
+			ObjectGuid targetGuid = p_MoveSpline.facing.target;
+			p_Data.WriteBit(targetGuid[6]);
+			p_Data.WriteBit(targetGuid[4]);
+			p_Data.WriteBit(targetGuid[3]);
+			p_Data.WriteBit(targetGuid[0]);
+			p_Data.WriteBit(targetGuid[5]);
+			p_Data.WriteBit(targetGuid[7]);
+			p_Data.WriteBit(targetGuid[1]);
+			p_Data.WriteBit(targetGuid[2]);
+		}
 
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
 
-        if (IS_PLAYER_GUID(p_CreatureGuid) && (l_Player = sObjectAccessor->FindPlayer(p_CreatureGuid)) != 0 && l_Player->m_taxi.GetCurrentTaxiPath())
-        {
-            l_Position          = p_MoveSpline.ComputePosition();
-            l_PathCount         = p_MoveSpline.spline.getPointCount() - 2;
-            l_SplineSplineOff   = 1;
+		uint32 uncompressedSplineCount = p_MoveSpline.splineflags & MoveSplineFlag::UncompressedPath ? p_MoveSpline.splineflags.cyclic ? p_MoveSpline.spline.getPointCount() - 2 : p_MoveSpline.spline.getPointCount() - 3 : 1;
+		p_Data.WriteBits(uncompressedSplineCount, 20);
 
-            l_Path.push_back(p_MoveSpline.spline.getPoint(1+l_PathCount));
+		p_Data.WriteBit(!p_MoveSpline.splineflags.raw());
+		p_Data.WriteBit(guid[3]);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(!p_MoveSpline.Duration());
+		p_Data.WriteBit(guid[7]);
+		p_Data.WriteBit(guid[4]);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(guid[5]);
 
-            for (uint32 l_I = 1 ; l_I < l_PathCount ; ++l_I)
-                l_Path.push_back(p_MoveSpline.spline.getPoint(1+l_I));
-        }
-        else
-        {
-            l_Position  = p_MoveSpline.ComputePosition();
-            l_PathCount = p_MoveSpline.spline.getPointCount() - 3;
+		int32 compressedSplineCount = p_MoveSpline.splineflags & MoveSplineFlag::UncompressedPath ? 0 : p_MoveSpline.spline.getPointCount() - 3;
+		p_Data.WriteBits(compressedSplineCount, 22); // WP count
 
-            l_Path.push_back(p_MoveSpline.spline.getPoint(1+l_PathCount));
+		p_Data.WriteBit(guid[6]);
+		p_Data.WriteBit(0); // Fake bit
 
-            for (uint32 l_I = 1 ; l_I < l_PathCount ; ++l_I)
-                l_Path.push_back(p_MoveSpline.spline.getPoint(1+l_I));
-        }
+		p_Data.WriteBit(transport[7]);
+		p_Data.WriteBit(transport[1]);
+		p_Data.WriteBit(transport[3]);
+		p_Data.WriteBit(transport[0]);
+		p_Data.WriteBit(transport[6]);
+		p_Data.WriteBit(transport[4]);
+		p_Data.WriteBit(transport[5]);
+		p_Data.WriteBit(transport[2]);
 
-        //////////////////////////////////////////////////////////////////////////
-        /// Write header spline advanced infos
-        //////////////////////////////////////////////////////////////////////////
+		p_Data.WriteBit(0); // Send no block
+		p_Data.WriteBit(0);
+		p_Data.WriteBit(guid[2]);
+		p_Data.WriteBit(guid[1]);
 
-        uint32          l_SplineFlagsRaw        = uint32(l_SplineFlags & uint32(~MoveSplineFlag::Mask_No_Monster_Move));
-        uint32          l_SplineDuration        = p_MoveSpline.Duration();
-        float           l_VerticalAcceleration  = p_MoveSpline.vertical_acceleration;
-        MonsterMoveType l_MoveType              = SplineFlagsToMonsterMoveType(l_SplineFlags);
+		p_Data.FlushBits();
 
-        bool byte8C = false;
+		//if (compressedSplineCount)
+			//WriteLinearPath(p_MoveSpline.spline, p_Data);
 
-        uint32 l_AnimationTime = l_SplineFlags.animation ? p_MoveSpline.effect_start_time : 0;
-        uint32 l_ParabolicTime = l_SplineFlags.parabolic ? p_MoveSpline.effect_start_time : 0;
-        uint8 l_AnimationState = l_SplineFlags.animation ? l_SplineFlags.getAnimationId() : 0;
+		p_Data.WriteByteSeq(guid[1]);
+		p_Data.WriteByteSeq(transport[6]);
+		p_Data.WriteByteSeq(transport[4]);
+		p_Data.WriteByteSeq(transport[1]);
+		p_Data.WriteByteSeq(transport[7]);
+		p_Data.WriteByteSeq(transport[0]);
+		p_Data.WriteByteSeq(transport[3]);
+		p_Data.WriteByteSeq(transport[5]);
+		p_Data.WriteByteSeq(transport[2]);
 
-        uint8 byte38 = 0;
-        uint8 byte6C = 0;
-        uint8 byte6D = 0;
-        uint8 byte78 = 0;
+		//if (p_MoveSpline.splineflags & MoveSplineFlag::UncompressedPath)
+		//{
+		//	if (p_MoveSpline.splineflags.cyclic)
+		//		WriteUncompressedCyclicPath(p_MoveSpline.spline, p_Data);
+		//	else
+		//		WriteUncompressedPath(p_MoveSpline.spline, p_Data);
+		//}
+		//else
+		//{
+			G3D::Vector3 const& point = p_MoveSpline.spline.getPoint(p_MoveSpline.spline.getPointCount() - 2);
+			p_Data << point.y << point.x << point.z;
+		//}
 
-        uint32 dword4C = 0;
-        uint32 dword90 = 0;
+		if (l_MoveType == MonsterMoveFacingTarget)
+		{
+			ObjectGuid targetGuid = p_MoveSpline.facing.target;
+			p_Data.WriteByteSeq(targetGuid[5]);
+			p_Data.WriteByteSeq(targetGuid[7]);
+			p_Data.WriteByteSeq(targetGuid[0]);
+			p_Data.WriteByteSeq(targetGuid[4]);
+			p_Data.WriteByteSeq(targetGuid[3]);
+			p_Data.WriteByteSeq(targetGuid[2]);
+			p_Data.WriteByteSeq(targetGuid[6]);
+			p_Data.WriteByteSeq(targetGuid[1]);
+		}
 
-        p_Data.WriteBit(byte8C);
-        p_Data.WriteBit(p_CreatureGuid[5]);
-        p_Data.WriteBit(!l_AnimationTime);
-        p_Data.WriteBit(!l_SplineDuration);
-        p_Data.WriteBit(p_CreatureGuid[4]);
-        p_Data.WriteBit(p_CreatureGuid[3]);
-        p_Data.WriteBit(!dword4C);
-        p_Data.WriteBit(!byte78);
-        p_Data.WriteBit(p_CreatureGuid[2]);
-        p_Data.WriteBit(!l_SplineFlagsRaw);
-        p_Data.WriteBit(p_CreatureGuid[0]);
+		p_Data.WriteByteSeq(guid[5]);
 
-        if (byte8C)
-        {
-            p_Data.WriteBits(0, 2);
-            p_Data.WriteBits(dword90, 22);
-        }
+		if (l_MoveType == MonsterMoveFacingAngle)
+			p_Data << float(p_MoveSpline.facing.angle);
 
-        p_Data.WriteBits(l_PathCount != 0 ? l_PathCount - 1 : 0, 22);
+		p_Data.WriteByteSeq(guid[3]);
 
-        p_Data.WriteBit(!byte6D);
-        p_Data.WriteBit(p_CreatureGuid[7]);
-        p_Data.WriteBit(0);
+		if (p_MoveSpline.splineflags.raw())
+			p_Data << uint32(p_MoveSpline.splineflags.raw());
 
-        p_Data.WriteBit(p_TransportGuid[5]);
-        p_Data.WriteBit(p_TransportGuid[3]);
-        p_Data.WriteBit(p_TransportGuid[4]);
-        p_Data.WriteBit(p_TransportGuid[6]);
-        p_Data.WriteBit(p_TransportGuid[2]);
-        p_Data.WriteBit(p_TransportGuid[1]);
-        p_Data.WriteBit(p_TransportGuid[7]);
-        p_Data.WriteBit(p_TransportGuid[0]);
+		p_Data.WriteByteSeq(guid[6]);
 
-        p_Data.WriteBit(!l_AnimationState);
-        p_Data.WriteBit(!l_ParabolicTime);
-        p_Data.WriteBit(!l_VerticalAcceleration);
+		if (l_MoveType == MonsterMoveFacingSpot)
+			p_Data << p_MoveSpline.facing.f.x << p_MoveSpline.facing.f.y << p_MoveSpline.facing.f.z;
 
-        p_Data.WriteBit(p_CreatureGuid[6]);
+		p_Data.WriteByteSeq(guid[0]);
+		p_Data.WriteByteSeq(guid[7]);
+		p_Data.WriteByteSeq(guid[2]);
+		p_Data.WriteByteSeq(guid[4]);
 
-        p_Data.WriteBits(l_SplineSplineOff > l_PathCount ? 0 : l_PathCount - l_SplineSplineOff, 20);
-
-        p_Data.WriteBit(p_CreatureGuid[1]);
-
-        p_Data.WriteBit(!byte6C);
-        p_Data.WriteBits(l_MoveType, 3);
-
-        if (l_MoveType == MonsterMoveFacingTarget)
-        {
-            ObjectGuid facingGuid = p_MoveSpline.facing.target;
-
-            p_Data.WriteBit(facingGuid[4]);
-            p_Data.WriteBit(facingGuid[6]);
-            p_Data.WriteBit(facingGuid[5]);
-            p_Data.WriteBit(facingGuid[1]);
-            p_Data.WriteBit(facingGuid[0]);
-            p_Data.WriteBit(facingGuid[7]);
-            p_Data.WriteBit(facingGuid[3]);
-            p_Data.WriteBit(facingGuid[2]);
-        }
-
-        p_Data.WriteBit(byte38);
-
-        p_Data.FlushBits();
-
-        //////////////////////////////////////////////////////////////////////////
-        /// Write all spline data
-        //////////////////////////////////////////////////////////////////////////
-
-        if (byte8C)
-        {
-            for (uint32 l_I = 0 ; l_I < dword90 ; ++l_I)
-            {
-                p_Data << uint16(0);
-                p_Data << uint16(0);
-            }
-
-            p_Data << uint16(0);
-            p_Data << uint16(0);
-            p_Data << float(0);
-            p_Data << float(0);
-        }
-
-        p_Data.WriteByteSeq(p_TransportGuid[0]);
-        p_Data.WriteByteSeq(p_TransportGuid[1]);
-        p_Data.WriteByteSeq(p_TransportGuid[2]);
-        p_Data.WriteByteSeq(p_TransportGuid[7]);
-        p_Data.WriteByteSeq(p_TransportGuid[3]);
-        p_Data.WriteByteSeq(p_TransportGuid[4]);
-        p_Data.WriteByteSeq(p_TransportGuid[6]);
-        p_Data.WriteByteSeq(p_TransportGuid[5]);
-
-        if (l_MoveType == MonsterMoveFacingTarget)
-        {
-            ObjectGuid facingGuid = p_MoveSpline.facing.target;
-
-            p_Data.WriteByteSeq(facingGuid[2]);
-            p_Data.WriteByteSeq(facingGuid[1]);
-            p_Data.WriteByteSeq(facingGuid[7]);
-            p_Data.WriteByteSeq(facingGuid[0]);
-            p_Data.WriteByteSeq(facingGuid[5]);
-            p_Data.WriteByteSeq(facingGuid[3]);
-            p_Data.WriteByteSeq(facingGuid[4]);
-            p_Data.WriteByteSeq(facingGuid[6]);
-        }
-
-        p_Data << float(l_Position.y);
-
-        p_Data.WriteByteSeq(p_CreatureGuid[7]);
-
-        if (l_AnimationTime)
-            p_Data << uint32(l_AnimationTime);
-
-        if (l_Path.size())
-        {
-            Vector3 l_MiddleOffset = ((p_MoveSpline.spline.getPoint(1) + p_MoveSpline.spline.getPoint(1+l_PathCount)) / 2.f);
-
-            for (uint32 l_I = 1 ; l_I < l_Path.size(); l_I++)
-            {
-                Vector3 offset = l_MiddleOffset - l_Path[l_I];
-                p_Data.appendPackXYZ(offset.x, offset.y, offset.z);
-            }
-        }
-
-        p_Data << float(0);
-        p_Data << float(l_Position.z);
-        p_Data << float(0);
-
-        if (l_MoveType == MonsterMoveFacingSpot)
-        {
-            p_Data << p_MoveSpline.facing.f.z;
-            p_Data << p_MoveSpline.facing.f.x;
-            p_Data << p_MoveSpline.facing.f.y;
-        }
-
-        for (uint32 l_I = l_SplineSplineOff ; l_I < l_Path.size() ; ++l_I)
-            p_Data << l_Path[l_I].y << l_Path[l_I].z << l_Path[l_I].x;
-
-        p_Data.WriteByteSeq(p_CreatureGuid[5]);
-        p_Data << uint32(p_MoveSpline.GetId());
-
-        if (l_SplineFlagsRaw)
-            p_Data << l_SplineFlagsRaw;
-
-        if (l_AnimationState)
-            p_Data << uint8(l_AnimationState);
-
-        p_Data.WriteByteSeq(p_CreatureGuid[0]);
-
-        if (byte6D)
-            p_Data << uint8(byte6D);
-
-        if (l_ParabolicTime)
-            p_Data << uint32(l_ParabolicTime);
-
-        p_Data << float(l_Position.x);
-
-        if (l_SplineDuration)
-            p_Data << uint32(l_SplineDuration);
-
-        p_Data.WriteByteSeq(p_CreatureGuid[4]);
-
-        if (l_VerticalAcceleration)
-            p_Data << l_VerticalAcceleration;
-
-        if (byte78)
-            p_Data << uint8(byte78);
-
-        if (l_MoveType == MonsterMoveFacingAngle)
-            p_Data << p_MoveSpline.facing.angle;
-
-        if (byte6C)
-            p_Data << uint8(byte6C);
-
-        p_Data << float(0);
-
-        if (dword4C)
-            p_Data << uint32(dword4C);
-
-        p_Data.WriteByteSeq(p_CreatureGuid[6]);
-        p_Data.WriteByteSeq(p_CreatureGuid[2]);
-        p_Data.WriteByteSeq(p_CreatureGuid[3]);
-        p_Data.WriteByteSeq(p_CreatureGuid[1]);
+		if (p_MoveSpline.Duration())
+			p_Data << uint32(p_MoveSpline.Duration());
     }
 
     void PacketBuilder::WriteStopMovement(Vector3 const& pos, ObjectGuid p_CreatureGuid, ObjectGuid p_TransportGuid, uint32 splineId, ByteBuffer& p_Data)
     {
-        uint32 l_SplineFlags = 0;
+		p_Data << float(pos.z);
+		p_Data << float(pos.x);
+		p_Data << uint32(splineId);
+		p_Data << float(pos.y);
+		p_Data << float(0.f); // Most likely transport Y
+		p_Data << float(0.f); // Most likely transport Z
+		p_Data << float(0.f); // Most likely transport X
 
-        p_Data.WriteBit(0);
-        p_Data.WriteBit(p_CreatureGuid[5]);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(p_CreatureGuid[4]);
-        p_Data.WriteBit(p_CreatureGuid[3]);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(p_CreatureGuid[2]);
-        p_Data.WriteBit(!1);
-        p_Data.WriteBit(p_CreatureGuid[0]);
-        p_Data.WriteBits(0, 22);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(p_CreatureGuid[7]);
-        p_Data.WriteBit(0);
-        p_Data.WriteBit(p_TransportGuid[5]);
-        p_Data.WriteBit(p_TransportGuid[3]);
-        p_Data.WriteBit(p_TransportGuid[4]);
-        p_Data.WriteBit(p_TransportGuid[6]);
-        p_Data.WriteBit(p_TransportGuid[2]);
-        p_Data.WriteBit(p_TransportGuid[1]);
-        p_Data.WriteBit(p_TransportGuid[7]);
-        p_Data.WriteBit(p_TransportGuid[0]);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBit(p_CreatureGuid[6]);
-        p_Data.WriteBits(0, 20);
-        p_Data.WriteBit(p_CreatureGuid[1]);
-        p_Data.WriteBit(!0);
-        p_Data.WriteBits(MonsterMoveStop, 3);
-        p_Data.WriteBit(0);
-        p_Data.FlushBits();
+		p_Data.WriteBit(1); // Parabolic speed // esi+4Ch
+		p_Data.WriteBit(p_CreatureGuid[0]);
+		p_Data.WriteBits(MonsterMoveStop, 3);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBits(0, 20);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(p_CreatureGuid[3]);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(p_CreatureGuid[7]);
+		p_Data.WriteBit(p_CreatureGuid[4]);
+		p_Data.WriteBit(1);
+		p_Data.WriteBit(p_CreatureGuid[5]);
+		p_Data.WriteBits(0, 22); // WP count
+		p_Data.WriteBit(p_CreatureGuid[6]);
+		p_Data.WriteBit(0); // Fake bit
+		p_Data.WriteBit(p_TransportGuid[7]);
+		p_Data.WriteBit(p_TransportGuid[1]);
+		p_Data.WriteBit(p_TransportGuid[3]);
+		p_Data.WriteBit(p_TransportGuid[0]);
+		p_Data.WriteBit(p_TransportGuid[6]);
+		p_Data.WriteBit(p_TransportGuid[4]);
+		p_Data.WriteBit(p_TransportGuid[5]);
+		p_Data.WriteBit(p_TransportGuid[2]);
+		p_Data.WriteBit(0); // Send no block
+		p_Data.WriteBit(0);
+		p_Data.WriteBit(p_CreatureGuid[2]);
+		p_Data.WriteBit(p_CreatureGuid[1]);
 
-        //////////////////////////////////////////////////////////////////////////
-        /// Write all spline data
-        //////////////////////////////////////////////////////////////////////////
+		p_Data.FlushBits();
 
-        p_Data.WriteByteSeq(p_TransportGuid[0]);
-        p_Data.WriteByteSeq(p_TransportGuid[1]);
-        p_Data.WriteByteSeq(p_TransportGuid[2]);
-        p_Data.WriteByteSeq(p_TransportGuid[7]);
-        p_Data.WriteByteSeq(p_TransportGuid[3]);
-        p_Data.WriteByteSeq(p_TransportGuid[4]);
-        p_Data.WriteByteSeq(p_TransportGuid[6]);
-        p_Data.WriteByteSeq(p_TransportGuid[5]);
-        p_Data << float(pos.y);
-        p_Data.WriteByteSeq(p_CreatureGuid[7]);
-        p_Data << float(0);
-        p_Data << float(pos.z);
-        p_Data << float(0);
-        p_Data.WriteByteSeq(p_CreatureGuid[5]);
-        p_Data << uint32(splineId);
-        p_Data << l_SplineFlags;
-        p_Data.WriteByteSeq(p_CreatureGuid[0]);
-        p_Data << float(pos.x);
-        p_Data.WriteByteSeq(p_CreatureGuid[4]);
-        p_Data << float(0);
-        p_Data.WriteByteSeq(p_CreatureGuid[6]);
-        p_Data.WriteByteSeq(p_CreatureGuid[2]);
-        p_Data.WriteByteSeq(p_CreatureGuid[3]);
-        p_Data.WriteByteSeq(p_CreatureGuid[1]);
+		p_Data.WriteByteSeq(p_CreatureGuid[1]);
+		p_Data.WriteByteSeq(p_TransportGuid[6]);
+		p_Data.WriteByteSeq(p_TransportGuid[4]);
+		p_Data.WriteByteSeq(p_TransportGuid[1]);
+		p_Data.WriteByteSeq(p_TransportGuid[7]);
+		p_Data.WriteByteSeq(p_TransportGuid[0]);
+		p_Data.WriteByteSeq(p_TransportGuid[3]);
+		p_Data.WriteByteSeq(p_TransportGuid[5]);
+		p_Data.WriteByteSeq(p_TransportGuid[2]);
+		p_Data.WriteByteSeq(p_CreatureGuid[5]);
+		p_Data.WriteByteSeq(p_CreatureGuid[3]);
+		p_Data.WriteByteSeq(p_CreatureGuid[6]);
+		p_Data.WriteByteSeq(p_CreatureGuid[0]);
+		p_Data.WriteByteSeq(p_CreatureGuid[7]);
+		p_Data.WriteByteSeq(p_CreatureGuid[2]);
+		p_Data.WriteByteSeq(p_CreatureGuid[4]);
     }
 
     void WriteLinearPath(const Spline<int32>& spline, ByteBuffer& data)

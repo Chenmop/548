@@ -2362,17 +2362,20 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
             if (!GetSession()->PlayerLogout())
             {
-                // send transfer packets
-                WorldPacket data(SMSG_TRANSFER_PENDING, 4 + 4 + 4);
-                data << uint32(mapid);
-                data.WriteBit(0);       // unknown
-                data.WriteBit(m_transport != 0);
-                data.FlushBits();
+				WorldPacket data(SMSG_TRANSFER_PENDING, 4 + 4 + 4);
+				data.WriteBit(0);       // unknown
+				data.WriteBit(m_transport != NULL);
 
-                if (m_transport)
-                    data << GetMapId() << m_transport->GetEntry() ;
+				data << uint32(mapid);
 
-                GetSession()->SendPacket(&data);
+				if (m_transport)
+				{
+					// Might be in wrong order
+					data << GetMapId();
+					data << m_transport->GetEntry();
+				}
+
+				GetSession()->SendPacket(&data);
             }
 
             // remove from old map now
@@ -3665,32 +3668,28 @@ void Player::SendInitialSpells()
     uint16 spellCount = 0;
 
     WorldPacket data(SMSG_INITIAL_SPELLS, (1+2+4*m_spells.size()+2+m_spellCooldowns.size()*(2+2+2+4+4)));
+	data.WriteBit(0);
 
-    for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
-    {
-        if (itr->second->state == PLAYERSPELL_REMOVED)
-            continue;
+	size_t bitPos = data.bitwpos();
+	data.WriteBits(0, 22); // spell count placeholder
 
-        if (!itr->second->active || itr->second->disabled)
-            continue;
+	data.FlushBits();
 
-        ++spellCount;
-    }
+	for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
+	{
+		if (itr->second->state == PLAYERSPELL_REMOVED)
+			continue;
 
-    data.WriteBits(spellCount, 22);
-    data.WriteBit(1);
-    data.FlushBits();
+		if (!itr->second->active || itr->second->disabled)
+			continue;
 
-    for (PlayerSpellMap::const_iterator itr = m_spells.begin(); itr != m_spells.end(); ++itr)
-    {
-        if (itr->second->state == PLAYERSPELL_REMOVED)
-            continue;
+		data << uint32(itr->first);
 
-        if (!itr->second->active || itr->second->disabled)
-            continue;
+		++spellCount;
+	}
 
-        data << uint32(itr->first);
-    }
+	data.PutBits(bitPos, spellCount, 22);
+	data.FlushBits();
    
     GetSession()->SendPacket(&data);
 
@@ -6780,189 +6779,76 @@ void Player::SendActionButtons(uint32 state) const
 {
     WorldPacket data(SMSG_ACTION_BUTTONS, 1+(MAX_ACTION_BUTTONS*4));
    
-    if (state != 2)
-    {
-        //Masks
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	uint8 buttons[MAX_ACTION_BUTTONS][8];
+	ActionButtonPACKET* buttonsTab = (ActionButtonPACKET*)buttons;
+	memset(buttons, 0, MAX_ACTION_BUTTONS * 8);
 
-            data.WriteBit(packed[7]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+	{
+		ActionButton const* ab = ((Player*)this)->GetActionButton(i);
+		if (!ab)
+		{
+			buttonsTab[i].id = 0;
+			buttonsTab[i].unk = 0;
+			continue;
+		}
 
-            data.WriteBit(packed[2]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+		buttonsTab[i].id = ab->GetAction();
+		buttonsTab[i].unk = uint32(ab->GetType());
+	}
 
-            data.WriteBit(packed[1]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	// Bits
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][4]);
 
-            data.WriteBit(packed[6]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][5]);
 
-            data.WriteBit(packed[3]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][3]);
 
-            data.WriteBit(packed[4]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][1]);
 
-            data.WriteBit(packed[5]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][6]);
 
-            data.WriteBit(packed[0]);
-        }
-        //GUIDS
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][7]);
 
-            data.WriteByteSeq(packed[3]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][0]);
 
-            data.WriteByteSeq(packed[1]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteBit(buttons[i][2]);
 
-            data.WriteByteSeq(packed[4]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	// Data
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][0]);
 
-            data.WriteByteSeq(packed[5]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][1]);
 
-            data.WriteByteSeq(packed[6]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][4]);
 
-            data.WriteByteSeq(packed[2]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][6]);
 
-            data.WriteByteSeq(packed[7]);
-        }
-        for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
-        {
-            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-            ObjectGuid packed = uint64(0);
-            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            {
-                packed = uint64(itr->second.packedData);
-            }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][7]);
 
-            data.WriteByteSeq(packed[0]);
-        }
-    }
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][2]);
 
-    data << uint8(state);
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][5]);
+
+	for (uint8 i = 0; i < MAX_ACTION_BUTTONS; ++i)
+		data.WriteByteSeq(buttons[i][3]);
+
+	data << uint8(state);
+
     GetSession()->SendPacket(&data);
     sLog->outInfo(LOG_FILTER_NETWORKIO, "Action Buttons for '%u' spec '%u' Sent", GetGUIDLow(), GetActiveSpec());
 }
@@ -7711,90 +7597,92 @@ void Player::_SaveCurrency(SQLTransaction& trans)
 
 void Player::SendNewCurrency(uint32 id) const
 {
-    PlayerCurrenciesMap::const_iterator itr = _currencyStorage.find(id);
-    if (itr == _currencyStorage.end())
-        return;
+	PlayerCurrenciesMap::const_iterator itr = _currencyStorage.find(id);
+	if (itr == _currencyStorage.end())
+		return;
 
-    ByteBuffer currencyData;
-    WorldPacket packet(SMSG_INIT_CURRENCY, 4 + (5*4 + 1));
-    packet.WriteBits(1, 21);
+	ByteBuffer currencyData;
+	WorldPacket packet(SMSG_INIT_CURRENCY, 3 + 1 + 4 + 4 + 4 + 4);
+	packet.WriteBits(1, 21);
 
-    CurrencyTypesEntry const* entry = sCurrencyTypesStore.LookupEntry(id);
-    if (!entry) // should never happen
-        return;
+	CurrencyTypesEntry const* entry = sCurrencyTypesStore.LookupEntry(id);
+	if (!entry) // should never happen
+		return;
 
-    uint32 precision = (entry->Flags & CURRENCY_FLAG_HIGH_PRECISION) ? CURRENCY_PRECISION : 1;
-    uint32 weekCount = itr->second.weekCount / precision;
-    uint32 weekCap = GetCurrencyWeekCap(entry) / precision;
+	uint32 precision = (entry->Flags & CURRENCY_FLAG_HIGH_PRECISION) ? CURRENCY_PRECISION : 1;
+	uint32 weekCount = itr->second.weekCount / precision;
+	uint32 weekCap = GetCurrencyWeekCap(entry) / precision;
+	uint32 seasonCount = 0;
 
-    packet.WriteBit(0);     // season total earned
-    packet.WriteBit(weekCount);
-    packet.WriteBit(weekCap);
-    packet.WriteBits(0, 5); // some flags
+	packet.WriteBit(seasonCount);
+	packet.WriteBits(0, 5); // some flags
+	packet.WriteBit(weekCap);
+	packet.WriteBit(weekCount);
 
-    currencyData << uint32(itr->second.totalCount / precision);
+	if (weekCount)
+		currencyData << uint32(weekCount);
 
-    //if (seasonTotal)
-    //    currencyData << uint32(seasonTotal / precision);
+	currencyData << uint32(entry->ID);
 
-    if (weekCap)
-        currencyData << uint32(weekCap);
+	if (seasonCount)
+		currencyData << uint32(seasonCount);
 
-    if (weekCount)
-        currencyData << uint32(weekCount);
+	currencyData << uint32(itr->second.totalCount / precision);
 
-    currencyData << uint32(entry->ID);
+	if (weekCap)
+		currencyData << uint32(weekCap);
 
-    packet.FlushBits();
-    packet.append(currencyData);
-    GetSession()->SendPacket(&packet);
+	packet.FlushBits();
+	packet.append(currencyData);
+	GetSession()->SendPacket(&packet);
 }
 
 void Player::SendCurrencies() const
 {
-     ByteBuffer currencyData;
-    WorldPacket packet(SMSG_INIT_CURRENCY, 4 + _currencyStorage.size()*(5*4 + 1));
-    size_t count_pos = packet.bitwpos();
-    packet.WriteBits(_currencyStorage.size(), 21);
+	ByteBuffer currencyData;
+	WorldPacket packet(SMSG_INIT_CURRENCY, 3 + (_currencyStorage.size() * (1 + 4 + 4 + 4 + 4)));
+	size_t count_pos = packet.bitwpos();
+	packet.WriteBits(_currencyStorage.size(), 21);
 
-    size_t count = 0;
-    for (PlayerCurrenciesMap::const_iterator itr = _currencyStorage.begin(); itr != _currencyStorage.end(); ++itr)
-    {
-        CurrencyTypesEntry const* entry = sCurrencyTypesStore.LookupEntry(itr->first);
+	size_t count = 0;
+	for (PlayerCurrenciesMap::const_iterator itr = _currencyStorage.begin(); itr != _currencyStorage.end(); ++itr)
+	{
+		CurrencyTypesEntry const* entry = sCurrencyTypesStore.LookupEntry(itr->first);
 
-        // not send init meta currencies.
-        if (!entry || entry->Category == CURRENCY_CATEGORY_META_CONQUEST)
-            continue;
+		// not send init meta currencies.
+		if (!entry || entry->Category == CURRENCY_CATEGORY_META_CONQUEST)
+			continue;
 
-        uint32 precision = (entry->Flags & CURRENCY_FLAG_HIGH_PRECISION) ? CURRENCY_PRECISION : 1;
-        uint32 weekCount = itr->second.weekCount / precision;
-        uint32 weekCap = GetCurrencyWeekCap(entry) / precision;
+		uint32 precision = (entry->Flags & CURRENCY_FLAG_HIGH_PRECISION) ? CURRENCY_PRECISION : 1;
+		uint32 weekCount = itr->second.weekCount / precision;
+		uint32 weekCap = GetCurrencyWeekCap(entry) / precision;
+		uint32 seasonCount = 0;
 
-        packet.WriteBit(0);     // season total earned
-        packet.WriteBit(weekCount);
-        packet.WriteBit(weekCap);
-        packet.WriteBits(0, 5); // some flags
+		packet.WriteBit(seasonCount);
+		packet.WriteBits(0, 5); // some flags
+		packet.WriteBit(weekCap);
+		packet.WriteBit(weekCount);
 
-        currencyData << uint32(itr->second.totalCount / precision);
+		if (weekCount)
+			currencyData << uint32(weekCount);
 
-        //if (seasonTotal)
-        //    currencyData << uint32(seasonTotal / precision);
+		currencyData << uint32(entry->ID);
 
-        if (weekCap)
-            currencyData << uint32(weekCap);
+		if (seasonCount)
+			currencyData << uint32(seasonCount);
 
-        if (weekCount)
-            currencyData << uint32(weekCount);
+		currencyData << uint32(itr->second.totalCount / precision);
 
-        currencyData << uint32(entry->ID);
+		if (weekCap)
+			currencyData << uint32(weekCap);
 
-        ++count;
-    }
+		++count;
+	}
 
-    packet.FlushBits();
-    packet.append(currencyData);
-    packet.PutBits(count_pos, count, 21);
-    GetSession()->SendPacket(&packet);
+	packet.FlushBits();
+	packet.append(currencyData);
+	packet.PutBits(count_pos, count, 21);
+	GetSession()->SendPacket(&packet);
 }
 
 void Player::SendPvpRewards() const
@@ -10233,10 +10121,9 @@ void Player::SendNotifyLootItemRemoved(uint8 lootSlot, uint64 p_LootedObject, ui
 void Player::SendUpdateWorldState(uint32 Field, uint32 Value)
 {
     WorldPacket data(SMSG_UPDATE_WORLD_STATE, 4+4+1);
-	data << Value;
-    data << Field;
-    data.WriteBit(0);
-    data.FlushBits();
+	data.WriteBit(0);
+	data << uint32(Value);
+	data << uint32(Field);
     GetSession()->SendPacket(&data);
 }
 
@@ -24031,15 +23918,37 @@ void Player::SendInitialPacketsBeforeAddToMap()
 
     // Homebind
     WorldPacket data(SMSG_BINDPOINTUPDATE, 5*4);
-    data << m_homebindY << m_homebindX << m_homebindZ;
-    data << uint32(m_homebindAreaId);
-    data << uint32(m_homebindMapId);
+	data << m_homebindX << m_homebindZ << m_homebindY;
+	data << (uint32)m_homebindAreaId;
+	data << (uint32)m_homebindMapId;
     GetSession()->SendPacket(&data);
 
     // SMSG_SET_PROFICIENCY
     // SMSG_SET_PCT_SPELL_MODIFIER
     // SMSG_SET_FLAT_SPELL_MODIFIER
     // SMSG_UPDATE_AURA_DURATION
+
+	data.Initialize(SMSG_WORLD_SERVER_INFO, 4 + 4 + 1 + 1);
+	// Bitfields have wrong order
+	data.WriteBit(0);                                               // IneligibleForLoot
+	data.WriteBit(0);                                               // HasRestrictedLevel
+	data.WriteBit(0);                                               // HasRestrictedMoney
+	data.WriteBit(0);                                               // HasGroupSize
+	data.FlushBits();
+
+	data << uint8(0);                                               // IsOnTournamentRealm
+	data << uint32(sWorld->GetNextWeeklyQuestsResetTime() - WEEK);  // LastWeeklyReset (not instance reset)
+	data << uint32(GetMap()->GetDifficulty());
+
+	//if (HasGroupSize)
+	//    data << uint32(0);
+	//if (HasRestrictedLevel)
+	//    data << uint32(20);                                       // RestrictedLevel (starter accounts)
+	//if (IneligibleForLoot)
+	//    data << uint32(0);                                        // EncounterMask
+	//if (HasRestrictedMoney)
+	//    data << uint32(100000);                                   // RestrictedMoney (starter accounts)
+	GetSession()->SendPacket(&data);
 
     SendInitialSpells();
 
@@ -24062,12 +23971,12 @@ void Player::SendInitialPacketsBeforeAddToMap()
     SendEquipmentSetList();
 
     data.Initialize(SMSG_LOGIN_SETTIMESPEED, 4 + 4 + 4 + 4 + 4);
-    data << float(0.01666667f);                             // game speed
-    data.AppendPackedTime(sWorld->GetGameTime());
-    data << uint32(1);                                      // added in 3.1.2 or data << uint32(1);
-    data << uint32(1);                                      // added in 3.1.2 or data << uint32(1);
-    data.AppendPackedTime(sWorld->GetGameTime());
-    GetSession()->SendPacket(&data);
+	data << uint32(0);
+	data.AppendPackedTime(sWorld->GetGameTime());
+	data << uint32(0);
+	data.AppendPackedTime(sWorld->GetGameTime());
+	data << float(0.01666667f);                             // game speed
+	GetSession()->SendPacket(&data);
 
     GetReputationMgr().SendForceReactions();                // SMSG_SET_FORCED_REACTIONS
 
@@ -25230,23 +25139,23 @@ void Player::SetMover(Unit* target)
     ObjectGuid guid = target->GetGUID();
 
     WorldPacket data(SMSG_MOVE_SET_ACTIVE_MOVER, 9);
-    data.WriteBit(guid[5]);
-    data.WriteBit(guid[7]);
-    data.WriteBit(guid[3]);
-    data.WriteBit(guid[6]);
-    data.WriteBit(guid[0]);
-    data.WriteBit(guid[4]);
-    data.WriteBit(guid[1]);
-    data.WriteBit(guid[2]);
+	data.WriteBit(guid[5]);
+	data.WriteBit(guid[1]);
+	data.WriteBit(guid[4]);
+	data.WriteBit(guid[2]);
+	data.WriteBit(guid[3]);
+	data.WriteBit(guid[7]);
+	data.WriteBit(guid[0]);
+	data.WriteBit(guid[6]);
 
-    data.WriteByteSeq(guid[6]);
-    data.WriteByteSeq(guid[2]);
-    data.WriteByteSeq(guid[3]);
-    data.WriteByteSeq(guid[0]);
-    data.WriteByteSeq(guid[5]);
-    data.WriteByteSeq(guid[7]);
-    data.WriteByteSeq(guid[1]);
-    data.WriteByteSeq(guid[4]);
+	data.WriteByteSeq(guid[4]);
+	data.WriteByteSeq(guid[6]);
+	data.WriteByteSeq(guid[2]);
+	data.WriteByteSeq(guid[0]);
+	data.WriteByteSeq(guid[3]);
+	data.WriteByteSeq(guid[7]);
+	data.WriteByteSeq(guid[5]);
+	data.WriteByteSeq(guid[1]);
 
     SendDirectMessage(&data);
 }
@@ -26788,37 +26697,45 @@ void Player::SendTalentsInfoData(bool /*pet*/)
 {
     WorldPacket data(SMSG_TALENTS_INFO, 1+1+GetSpecsCount()*(4+1+1*2+1+MAX_GLYPH_SLOT_INDEX*2));
 
-		data.WriteBits(GetSpecsCount(), 19);
-	
-	for (uint8 i = 0; i < GetSpecsCount(); ++i)
-		data.WriteBits(GetTalentMap(i)->size(), 23);
+	size_t* wpos = new size_t[GetSpecsCount()];
 
-		data.FlushBits();
-    
-    for (uint8 i = 0; i < GetSpecsCount(); ++i)
-    {
+	data << uint8(GetActiveSpec());                        // talent group index (0 or 1)
+	data.WriteBits(GetSpecsCount(), 19);
+
+	for (int i = 0; i < GetSpecsCount(); i++)
+	{
+		wpos[i] = data.bitwpos();
+		data.WriteBits(0, 23);                             // spec talent count
+	}
+
+	data.FlushBits();
+
+	for (int32 i = 0; i < GetSpecsCount(); i++)
+	{
 		for (uint8 j = 0; j < MAX_GLYPH_SLOT_INDEX; ++j)
-            data << uint16(GetGlyph(i, j));               // GlyphProperties.dbc
-			
+			data << uint16(GetGlyph(i, j));               // GlyphProperties.dbc
 
-		for (PlayerTalentMap::iterator itr = GetTalentMap(i)->begin(); itr != GetTalentMap(i)->end(); ++itr)
-            data << uint16(itr->first); // id from Talent.dbc
+		int32 talentCount = 0;
+		for (uint32 talentId = 0; talentId < sTalentStore.GetNumRows(); ++talentId)
+		{
+			TalentEntry const* talentInfo = sTalentStore.LookupEntry(talentId);
+			if (!talentInfo)
+				continue;
 
-			data << uint32(GetPrimaryTalentTree(i)); // current spec id from ChrSpecialization.dbc
-        //data << uint8(GetTalentMap(i)->size());
+			if (talentInfo->Class != getClass())
+				continue;
 
-        
-        //for (uint8 j = 0; j < 6 && j < GetTalentMap()->size(); ++j)
+			if (!HasTalent(talentInfo->SpellId, i))
+				continue;
 
-        //data << uint8(MAX_GLYPH_SLOT_INDEX);           // glyphs count
-        
-    }
-    /*if (pet)
-        BuildPetTalentsInfoData(&data);
-    else
-        BuildPlayerTalentsInfoData(&data);*/
+			data << uint16(talentInfo->TalentID);  // Talent.dbc
 
-		data << uint8(GetActiveSpec());
+			talentCount++;
+		}
+
+		data.PutBits(wpos[i], talentCount, 23);
+		data << uint32(GetPrimaryTalentTree(i));
+	}
 
     GetSession()->SendPacket(&data);
     SetUInt32Value(PLAYER_MAX_TALENT_TIERS, uint32(getLevel() / 15));
@@ -28135,234 +28052,227 @@ Pet* Player::SummonPet(uint32 entry, float x, float y, float z, float ang, PetTy
 
 void Player::ReadMovementInfo(WorldPacket& data, MovementInfo* mi, Movement::ExtraMovementStatusElement* extras /*= NULL*/)
 {
-    if (GetTypeId() != TYPEID_PLAYER)
-        return;
+	MovementStatusElements const* sequence = GetMovementStatusElementsSequence(data.GetOpcode());
+	if (!sequence)
+	{
+		//sLog->outError(LOG_FILTER_NETWORKIO, "Player::ReadMovementInfo: No movement sequence found for opcode %s", GetOpcodeNameForLogging(data.GetOpcode(), false).c_str());
+		return;
+	}
 
-    bool hasMovementFlags = false;
-    bool hasMovementFlags2 = false;
-    bool hasTimestamp = false;
-    bool hasOrientation = false;
-    bool hasTransportData = false;
-    bool hasTransportTime2 = false;
-    bool hasTransportTime3 = false;
-    bool hasPitch = false;
-    bool hasFallData = false;
-    bool hasFallDirection = false;
-    bool hasSplineElevation = false;
+	bool hasMovementFlags = false;
+	bool hasMovementFlags2 = false;
+	bool hasTimestamp = false;
+	bool hasOrientation = false;
+	bool hasTransportData = false;
+	bool hasTransportTime2 = false;
+	bool hasTransportTime3 = false;
+	bool hasPitch = false;
+	bool hasFallData = false;
+	bool hasFallDirection = false;
+	bool hasSplineElevation = false;
+	bool hasCounter = false;
+	uint32 forcesCount = 0u;
 
-    MovementStatusElements const* sequence = GetMovementStatusElementsSequence(data.GetOpcode());
-    if (sequence == NULL)
-    {
-        sLog->outError(LOG_FILTER_NETWORKIO, "WorldSession::ReadMovementInfo: No movement sequence found for opcode 0x%04X", uint32(data.GetOpcode()));
-        return;
-    }
+	ObjectGuid guid;
+	ObjectGuid tguid;
 
-    ObjectGuid guid;
-    ObjectGuid tguid;
+	for (; *sequence != MSEEnd; ++sequence)
+	{
+		MovementStatusElements const& element = *sequence;
 
-    uint32 l_MseCounter = 0;
-    bool l_HaveAlive = false;
-
-    for (; *sequence != MSEEnd; ++sequence)
-    {
-        MovementStatusElements const& element = *sequence;
-
-        switch (element)
-        {
-        case MSEHasGuidByte0:
-        case MSEHasGuidByte1:
-        case MSEHasGuidByte2:
-        case MSEHasGuidByte3:
-        case MSEHasGuidByte4:
-        case MSEHasGuidByte5:
-        case MSEHasGuidByte6:
-        case MSEHasGuidByte7:
-            guid[element - MSEHasGuidByte0] = data.ReadBit();
-            break;
-        case MSEHasTransportGuidByte0:
-        case MSEHasTransportGuidByte1:
-        case MSEHasTransportGuidByte2:
-        case MSEHasTransportGuidByte3:
-        case MSEHasTransportGuidByte4:
-        case MSEHasTransportGuidByte5:
-        case MSEHasTransportGuidByte6:
-        case MSEHasTransportGuidByte7:
-            if (hasTransportData)
-                tguid[element - MSEHasTransportGuidByte0] = data.ReadBit();
-            break;
-        case MSEGuidByte0:
-        case MSEGuidByte1:
-        case MSEGuidByte2:
-        case MSEGuidByte3:
-        case MSEGuidByte4:
-        case MSEGuidByte5:
-        case MSEGuidByte6:
-        case MSEGuidByte7:
-            data.ReadByteSeq(guid[element - MSEGuidByte0]);
-            break;
-        case MSETransportGuidByte0:
-        case MSETransportGuidByte1:
-        case MSETransportGuidByte2:
-        case MSETransportGuidByte3:
-        case MSETransportGuidByte4:
-        case MSETransportGuidByte5:
-        case MSETransportGuidByte6:
-        case MSETransportGuidByte7:
-            if (hasTransportData)
-                data.ReadByteSeq(tguid[element - MSETransportGuidByte0]);
-            break;
-        case MSEHasMovementFlags:
-            hasMovementFlags = !data.ReadBit();
-            break;
-        case MSEHasMovementFlags2:
-            hasMovementFlags2 = !data.ReadBit();
-            break;
-        case MSEHasTimestamp:
-            hasTimestamp = !data.ReadBit();
-            break;
-        case MSEHasOrientation:
-            hasOrientation = !data.ReadBit();
-            break;
-        case MSEHasTransportData:
-            hasTransportData = data.ReadBit();
-            break;
-        case MSEHasTransportTime2:
-            if (hasTransportData)
-                hasTransportTime2 = data.ReadBit();
-            break;
-        case MSEHasTransportTime3:
-            if (hasTransportData)
-                hasTransportTime3 = data.ReadBit();
-            break;
-        case MSEHasPitch:
-            hasPitch = !data.ReadBit();
-            break;
-        case MSEHasFallData:
-            hasFallData = data.ReadBit();
-            break;
-        case MSEHasFallDirection:
-            if (hasFallData)
-                hasFallDirection = data.ReadBit();
-            break;
-        case MSEHasSplineElevation:
-            hasSplineElevation = !data.ReadBit();
-            break;
-        case MSEHasSpline:
-            data.ReadBit();
-            break;
-        case MSEMovementFlags:
-            if (hasMovementFlags)
-                mi->flags = data.ReadBits(30);
-            break;
-        case MSEMovementFlags2:
-            if (hasMovementFlags2)
-                mi->flags2 = data.ReadBits(13);
-            break;
-        case MSECounter:
-            l_MseCounter = data.ReadBits(22);
-            break;
-        case MSEHasATime:
-            l_HaveAlive = !data.ReadBit();
-            break;
-        case MSETimestamp:
-            if (hasTimestamp)
-                data >> mi->time;
-            break;
-        case MSEPositionX:
-            data >> mi->pos.m_positionX;
-            break;
-        case MSEPositionY:
-            data >> mi->pos.m_positionY;
-            break;
-        case MSEPositionZ:
-            data >> mi->pos.m_positionZ;
-            break;
-        case MSEOrientation:
-            if (hasOrientation)
-                mi->pos.SetOrientation(data.read<float>());
-            break;
-        case MSETransportPositionX:
-            if (hasTransportData)
-                data >> mi->t_pos.m_positionX;
-            break;
-        case MSETransportPositionY:
-            if (hasTransportData)
-                data >> mi->t_pos.m_positionY;
-            break;
-        case MSETransportPositionZ:
-            if (hasTransportData)
-                data >> mi->t_pos.m_positionZ;
-            break;
-        case MSETransportOrientation:
-            if (hasTransportData)
-                mi->t_pos.SetOrientation(data.read<float>());
-            break;
-        case MSETransportSeat:
-            if (hasTransportData)
-                data >> mi->t_seat;
-            break;
-        case MSETransportTime:
-            if (hasTransportData)
-                data >> mi->t_time;
-            break;
-        case MSETransportTime2:
-            if (hasTransportData && hasTransportTime2)
-                data >> mi->t_time2;
-            break;
-        case MSETransportTime3:
-            if (hasTransportData && hasTransportTime3)
-                data >> mi->t_time3;
-            break;
-        case MSEPitch:
-            if (hasPitch)
-                mi->pitch = G3D::wrap(data.read<float>(), float(-M_PI), float(M_PI));
-            break;
-        case MSEFallTime:
-            if (hasFallData)
-                data >> mi->fallTime;
-            break;
-        case MSEFallVerticalSpeed:
-            if (hasFallData)
-                data >> mi->j_zspeed;
-            break;
-        case MSEFallCosAngle:
-            if (hasFallData && hasFallDirection)
-                data >> mi->j_cosAngle;
-            break;
-        case MSEFallSinAngle:
-            if (hasFallData && hasFallDirection)
-                data >> mi->j_sinAngle;
-            break;
-        case MSEFallHorizontalSpeed:
-            if (hasFallData && hasFallDirection)
-                data >> mi->j_xyspeed;
-            break;
-        case MSESplineElevation:
-            if (hasSplineElevation)
-                data >> mi->splineElevation;
-            break;
-        case MSECounterUint32:
-            for (size_t l_CounterIt = 0 ; l_CounterIt < l_MseCounter ; l_CounterIt++)
-                data.read_skip<uint32>();
-            break;
-        case MSEATime:
-            if (l_HaveAlive)
-                data.read_skip<uint32>();
-            break;
-        case MSEZeroBit:
-        case MSEOneBit:
-            data.ReadBit();
-            break;
-        case MSEExtraElement:
-            extras->ReadNextElement(data);
-            break;
-        case MSESkipUint32:
-            data.read_skip<uint32>();
-            break;
-        default:
-                ASSERT(false && "Incorrect sequence element detected at ReadMovementInfo");
-                break;
-        }
+		switch (element)
+		{
+		case MSEHasGuidByte0:
+		case MSEHasGuidByte1:
+		case MSEHasGuidByte2:
+		case MSEHasGuidByte3:
+		case MSEHasGuidByte4:
+		case MSEHasGuidByte5:
+		case MSEHasGuidByte6:
+		case MSEHasGuidByte7:
+			guid[element - MSEHasGuidByte0] = data.ReadBit();
+			break;
+		case MSEHasTransportGuidByte0:
+		case MSEHasTransportGuidByte1:
+		case MSEHasTransportGuidByte2:
+		case MSEHasTransportGuidByte3:
+		case MSEHasTransportGuidByte4:
+		case MSEHasTransportGuidByte5:
+		case MSEHasTransportGuidByte6:
+		case MSEHasTransportGuidByte7:
+			if (hasTransportData)
+				tguid[element - MSEHasTransportGuidByte0] = data.ReadBit();
+			break;
+		case MSEGuidByte0:
+		case MSEGuidByte1:
+		case MSEGuidByte2:
+		case MSEGuidByte3:
+		case MSEGuidByte4:
+		case MSEGuidByte5:
+		case MSEGuidByte6:
+		case MSEGuidByte7:
+			data.ReadByteSeq(guid[element - MSEGuidByte0]);
+			break;
+		case MSETransportGuidByte0:
+		case MSETransportGuidByte1:
+		case MSETransportGuidByte2:
+		case MSETransportGuidByte3:
+		case MSETransportGuidByte4:
+		case MSETransportGuidByte5:
+		case MSETransportGuidByte6:
+		case MSETransportGuidByte7:
+			if (hasTransportData)
+				data.ReadByteSeq(tguid[element - MSETransportGuidByte0]);
+			break;
+		case MSEHasMovementFlags:
+			hasMovementFlags = !data.ReadBit();
+			break;
+		case MSEHasMovementFlags2:
+			hasMovementFlags2 = !data.ReadBit();
+			break;
+		case MSEHasTimestamp:
+			hasTimestamp = !data.ReadBit();
+			break;
+		case MSEHasOrientation:
+			hasOrientation = !data.ReadBit();
+			break;
+		case MSEHasTransportData:
+			hasTransportData = data.ReadBit();
+			break;
+		case MSEHasTransportTime2:
+			if (hasTransportData)
+				hasTransportTime2 = data.ReadBit();
+			break;
+		case MSEHasTransportTime3:
+			if (hasTransportData)
+				hasTransportTime3 = data.ReadBit();
+			break;
+		case MSEHasPitch:
+			hasPitch = !data.ReadBit();
+			break;
+		case MSEHasFallData:
+			hasFallData = data.ReadBit();
+			break;
+		case MSEHasFallDirection:
+			if (hasFallData)
+				hasFallDirection = data.ReadBit();
+			break;
+		case MSEHasSplineElevation:
+			hasSplineElevation = !data.ReadBit();
+			break;
+		case MSEHasSpline:
+			data.ReadBit();
+			break;
+		case MSEMovementFlags:
+			if (hasMovementFlags)
+				mi->flags = data.ReadBits(30);
+			break;
+		case MSEMovementFlags2:
+			if (hasMovementFlags2)
+				mi->flags2 = data.ReadBits(13);
+			break;
+		case MSETimestamp:
+			if (hasTimestamp)
+				data >> mi->time;
+			break;
+		case MSEPositionX:
+			data >> mi->pos.m_positionX;
+			break;
+		case MSEPositionY:
+			data >> mi->pos.m_positionY;
+			break;
+		case MSEPositionZ:
+			data >> mi->pos.m_positionZ;
+			break;
+		case MSEOrientation:
+			if (hasOrientation)
+				mi->pos.SetOrientation(data.read<float>());
+			break;
+		case MSETransportPositionX:
+			if (hasTransportData)
+				data >> mi->t_pos.m_positionX;
+			break;
+		case MSETransportPositionY:
+			if (hasTransportData)
+				data >> mi->t_pos.m_positionY;
+			break;
+		case MSETransportPositionZ:
+			if (hasTransportData)
+				data >> mi->t_pos.m_positionZ;
+			break;
+		case MSETransportOrientation:
+			if (hasTransportData)
+				mi->t_pos.SetOrientation(data.read<float>());
+			break;
+		case MSETransportSeat:
+			if (hasTransportData)
+				data >> mi->t_seat;
+			break;
+		case MSETransportTime:
+			if (hasTransportData)
+				data >> mi->t_time;
+			break;
+		case MSETransportTime2:
+			if (hasTransportData && hasTransportTime2)
+				data >> mi->t_time2;
+			break;
+		case MSETransportTime3:
+			if (hasTransportData && hasTransportTime3)
+				data >> mi->t_time3;
+			break;
+		case MSEPitch:
+			if (hasPitch)
+				mi->pitch = G3D::wrap(data.read<float>(), float(-M_PI), float(M_PI));
+			break;
+		case MSEFallTime:
+			if (hasFallData)
+				data >> mi->fallTime;
+			break;
+		case MSEFallVerticalSpeed:
+			if (hasFallData)
+				data >> mi->j_zspeed;
+			break;
+		case MSEFallCosAngle:
+			if (hasFallData && hasFallDirection)
+				data >> mi->j_cosAngle;
+			break;
+		case MSEFallSinAngle:
+			if (hasFallData && hasFallDirection)
+				data >> mi->j_sinAngle;
+			break;
+		case MSEFallHorizontalSpeed:
+			if (hasFallData && hasFallDirection)
+				data >> mi->j_xyspeed;
+			break;
+		case MSESplineElevation:
+			if (hasSplineElevation)
+				data >> mi->splineElevation;
+			break;
+		case MSECounterCount:
+			forcesCount = data.ReadBits(22);
+			break;
+		case MSECounter:
+			for (uint32 i = 0; i < forcesCount; i++)
+				data.read_skip<uint32>();
+			break;
+		case MSEHasUnkTime:
+			hasCounter = !data.ReadBit();
+			break;
+		case MSEUnkTime:
+			if (hasCounter)
+				data.read_skip<uint32>();
+			break;
+		case MSEZeroBit:
+		case MSEOneBit:
+			data.ReadBit();
+			break;
+		case MSEExtraElement:
+			extras->ReadNextElement(data);
+			break;
+		default:
+			ASSERT(Movement::PrintInvalidSequenceElement(element, __FUNCTION__));
+			break;
+		}
     }
 
     mi->guid = guid;

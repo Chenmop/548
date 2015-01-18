@@ -789,34 +789,18 @@ void WorldSession::SetAccountData(AccountDataType type, time_t tm, std::string c
 
 void WorldSession::SendAccountDataTimes(uint32 mask)
 {
-	{
-    WorldPacket data(SMSG_ACCOUNT_DATA_TIMES, 4 + 1 + 4 + NUM_ACCOUNT_DATA_TYPES * 4);
+	WorldPacket data(SMSG_ACCOUNT_DATA_TIMES, 4 + 1 + 4 + NUM_ACCOUNT_DATA_TYPES * 4);
 
-        data << uint32(time(NULL));                             // Server time
+	data.WriteBit(1);
+	data.FlushBits();
 
-        for (uint32 i = 0; i < NUM_ACCOUNT_DATA_TYPES; ++i)
-                data << uint32(GetAccountData(AccountDataType(i))->Time);// also unix time
+	for (uint32 i = 0; i < NUM_ACCOUNT_DATA_TYPES; ++i)
+		data << uint32(GetAccountData(AccountDataType(i))->Time); // also unix time
 
-        data << uint32(mask);                                   // type mask
-        data.WriteBit(0);
-        data.FlushBits();
+	data << uint32(mask);
+	data << uint32(time(NULL)); // Server time
 
-        SendPacket(&data);
-    }
-    {
-        std::string l_TimeZone1 = "Europe/Paris";
-        std::string l_TimeZone2 = "Europe/Paris";
-
-        WorldPacket data(SMSG_SET_TIME_ZONE);
-        data.WriteBits(l_TimeZone1.length(), 7);
-        data.WriteBits(l_TimeZone2.length(), 7);
-        data.FlushBits();
-
-        data.append(&l_TimeZone1[0], l_TimeZone1.length());
-        data.append(&l_TimeZone2[0], l_TimeZone1.length());
-
-        SendPacket(&data);
-	}
+	SendPacket(&data);   
 }
 
 void WorldSession::LoadTutorialsData()

@@ -170,8 +170,8 @@ int WorldSocket::SendPacket(WorldPacket const& pct)
 
     WorldPacket const* pkt = &pct;
 
-    if (m_Session)
-        sLog->outDebug(LOG_FILTER_GENERAL, "S->C: %s %s", m_Session->GetPlayerInfo().c_str(), GetOpcodeNameForLogging(pkt->GetOpcode()).c_str());
+    if (m_Session) //LOG_FILTER_GENERAL
+        sLog->outDebug(LOG_FILTER_WORLDSERVER, "S->C: %s %s", m_Session->GetPlayerInfo().c_str(), GetOpcodeNameForLogging(pkt->GetOpcode()).c_str());
 
     sScriptMgr->OnPacketSend(this, *pkt);
 
