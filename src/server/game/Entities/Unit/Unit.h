@@ -311,6 +311,8 @@ enum HitInfo
     // 0x00400000
     HITINFO_RAGE_GAIN           = 0x00800000,
 	HITINFO_UNK12				= 0x00001000,
+	HITINFO_UNK25				= 0x02000000,
+	HITINFO_UNK26				= 0x04000000,
 };
 
 //i would like to remove this: (it is defined in item.h

@@ -31,23 +31,23 @@
 void WorldSession::HandleAttackSwingOpcode(WorldPacket& recvData)
 {
     ObjectGuid guid;
-    guid[7] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[3] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
+	guid[6] = recvData.ReadBit();
+	guid[5] = recvData.ReadBit();
+	guid[7] = recvData.ReadBit();
+	guid[0] = recvData.ReadBit();
+	guid[3] = recvData.ReadBit();
+	guid[1] = recvData.ReadBit();
+	guid[4] = recvData.ReadBit();
+	guid[2] = recvData.ReadBit();
 
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[5]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[0]);
+	recvData.ReadByteSeq(guid[6]);
+	recvData.ReadByteSeq(guid[7]);
+	recvData.ReadByteSeq(guid[1]);
+	recvData.ReadByteSeq(guid[3]);
+	recvData.ReadByteSeq(guid[2]);
+	recvData.ReadByteSeq(guid[0]);
+	recvData.ReadByteSeq(guid[4]);
+	recvData.ReadByteSeq(guid[5]);
 
     sLog->outDebug(LOG_FILTER_NETWORKIO, "WORLD: Recvd CMSG_ATTACKSWING Message guidlow:%u guidhigh:%u", GUID_LOPART(guid), GUID_HIPART(guid));
 
@@ -110,45 +110,50 @@ void WorldSession::HandleSetSheathedOpcode(WorldPacket& recvData)
 
 void WorldSession::SendAttackStop(Unit const* enemy)
 {
-    WorldPacket data(SMSG_ATTACKSTOP, (8+8+4));             // we guess size
-    ObjectGuid l_PlayerGuid = GetPlayer()->GetGUID();
-    ObjectGuid l_EnemyGuid  = enemy ? enemy->GetGUID() : 0;
+	if (!GetPlayer())
+		return;
 
-    data.WriteBit(l_EnemyGuid[0]);
-    data.WriteBit(l_PlayerGuid[4]);
-    data.WriteBit(l_EnemyGuid[1]);
-    data.WriteBit(l_PlayerGuid[7]);
-    data.WriteBit(l_EnemyGuid[6]);
-    data.WriteBit(l_EnemyGuid[3]);
-    data.WriteBit(0);                                      // unk, can be 1 also
-    data.WriteBit(l_EnemyGuid[5]);
-    data.WriteBit(l_PlayerGuid[1]);
-    data.WriteBit(l_PlayerGuid[0]);
-    data.WriteBit(l_EnemyGuid[7]);
-    data.WriteBit(l_PlayerGuid[6]);
-    data.WriteBit(l_EnemyGuid[4]);
-    data.WriteBit(l_EnemyGuid[2]);
-    data.WriteBit(l_PlayerGuid[3]);
-    data.WriteBit(l_PlayerGuid[2]);
-    data.WriteBit(l_PlayerGuid[5]);
-    data.FlushBits();
+	ObjectGuid attackerGuid = GetPlayer()->GetGUID();
+	ObjectGuid victimGuid = enemy ? enemy->GetGUID() : NULL;
 
-    data.WriteByteSeq(l_PlayerGuid[2]);
-    data.WriteByteSeq(l_PlayerGuid[7]);
-    data.WriteByteSeq(l_EnemyGuid[0]);
-    data.WriteByteSeq(l_PlayerGuid[5]);
-    data.WriteByteSeq(l_EnemyGuid[5]);
-    data.WriteByteSeq(l_PlayerGuid[3]);
-    data.WriteByteSeq(l_EnemyGuid[7]);
-    data.WriteByteSeq(l_EnemyGuid[1]);
-    data.WriteByteSeq(l_EnemyGuid[3]);
-    data.WriteByteSeq(l_PlayerGuid[0]);
-    data.WriteByteSeq(l_EnemyGuid[4]);
-    data.WriteByteSeq(l_EnemyGuid[6]);
-    data.WriteByteSeq(l_PlayerGuid[1]);
-    data.WriteByteSeq(l_PlayerGuid[6]);
-    data.WriteByteSeq(l_EnemyGuid[2]);
-    data.WriteByteSeq(l_PlayerGuid[4]);
+	WorldPacket data(SMSG_ATTACKSTOP, 8 + 8);
 
-    SendPacket(&data);
+	data.WriteBit(victimGuid[5]);
+	data.WriteBit(victimGuid[6]);
+	data.WriteBit(attackerGuid[3]);
+	data.WriteBit(attackerGuid[6]);
+	data.WriteBit(attackerGuid[7]);
+	data.WriteBit(attackerGuid[2]);
+	data.WriteBit(attackerGuid[5]);
+	data.WriteBit(victimGuid[4]);
+	data.WriteBit(1);
+	data.WriteBit(victimGuid[3]);
+	data.WriteBit(victimGuid[0]);
+	data.WriteBit(victimGuid[2]);
+	data.WriteBit(victimGuid[7]);
+	data.WriteBit(attackerGuid[4]);
+	data.WriteBit(attackerGuid[1]);
+	data.WriteBit(attackerGuid[0]);
+	data.WriteBit(victimGuid[1]);
+
+	data.FlushBits();
+
+	data.WriteByteSeq(victimGuid[0]);
+	data.WriteByteSeq(victimGuid[3]);
+	data.WriteByteSeq(victimGuid[5]);
+	data.WriteByteSeq(victimGuid[2]);
+	data.WriteByteSeq(attackerGuid[0]);
+	data.WriteByteSeq(attackerGuid[6]);
+	data.WriteByteSeq(attackerGuid[3]);
+	data.WriteByteSeq(victimGuid[4]);
+	data.WriteByteSeq(attackerGuid[1]);
+	data.WriteByteSeq(attackerGuid[4]);
+	data.WriteByteSeq(victimGuid[6]);
+	data.WriteByteSeq(attackerGuid[5]);
+	data.WriteByteSeq(attackerGuid[7]);
+	data.WriteByteSeq(attackerGuid[2]);
+	data.WriteByteSeq(victimGuid[1]);
+	data.WriteByteSeq(victimGuid[7]);
+
+	GetPlayer()->SendMessageToSet(&data, true);
 }

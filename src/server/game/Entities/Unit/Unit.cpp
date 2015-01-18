@@ -1431,10 +1431,11 @@ void Unit::DealMeleeDamage(CalcDamageInfo* damageInfo, bool durabilityLoss)
 
 void Unit::HandleEmoteCommand(uint32 anim_id)
 {
-    WorldPacket data(SMSG_EMOTE, 4 + 8);
-    data << uint32(anim_id);
-    data << uint64(GetGUID());
-    SendMessageToSet(&data, true);
+	WorldPacket data(SMSG_EMOTE, 8);
+
+	data << uint64(GetGUID());
+
+	SendMessageToSet(&data, true);
 }
 
 bool Unit::IsDamageReducedByArmor(SpellSchoolMask schoolMask, SpellInfo const* spellInfo, uint8 effIndex)
@@ -2119,102 +2120,93 @@ float Unit::CalculateLevelPenalty(SpellInfo const* spellProto) const
 
 void Unit::SendMeleeAttackStart(Unit* victim)
 {
-    WorldPacket data(SMSG_ATTACKSTART, 8 + 8 + 4);
-    ObjectGuid l_PlayerGuid = GetGUID();
-    ObjectGuid l_EnemyGuid  = victim->GetGUID();
+	WorldPacket data(SMSG_ATTACKSTART, 8 + 8);
 
-    data.WriteBit(l_PlayerGuid[6]);
-    data.WriteBit(l_PlayerGuid[1]);
-    data.WriteBit(l_EnemyGuid[7]);
-    data.WriteBit(l_EnemyGuid[5]);
-    data.WriteBit(l_PlayerGuid[2]);
-    data.WriteBit(l_EnemyGuid[2]);
-    data.WriteBit(l_EnemyGuid[1]);
-    data.WriteBit(l_PlayerGuid[0]);
-    data.WriteBit(l_EnemyGuid[4]);
-    data.WriteBit(l_EnemyGuid[0]);
-    data.WriteBit(l_PlayerGuid[4]);
-    data.WriteBit(l_PlayerGuid[7]);
-    data.WriteBit(l_PlayerGuid[5]);
-    data.WriteBit(l_EnemyGuid[3]);
-    data.WriteBit(l_PlayerGuid[3]);
-    data.WriteBit(l_EnemyGuid[6]);
+	ObjectGuid attackerGuid = victim->GetGUID();
+	ObjectGuid victimGuid = GetGUID();
 
-    data.FlushBits();
+	data.WriteBit(victimGuid[7]);
+	data.WriteBit(attackerGuid[7]);
+	data.WriteBit(attackerGuid[3]);
+	data.WriteBit(victimGuid[3]);
+	data.WriteBit(victimGuid[5]);
+	data.WriteBit(attackerGuid[4]);
+	data.WriteBit(attackerGuid[1]);
+	data.WriteBit(victimGuid[4]);
+	data.WriteBit(attackerGuid[0]);
+	data.WriteBit(victimGuid[6]);
+	data.WriteBit(attackerGuid[5]);
+	data.WriteBit(victimGuid[2]);
+	data.WriteBit(attackerGuid[6]);
+	data.WriteBit(victimGuid[1]);
+	data.WriteBit(attackerGuid[2]);
+	data.WriteBit(victimGuid[0]);
 
-    data.WriteByteSeq(l_EnemyGuid[6]);
-    data.WriteByteSeq(l_EnemyGuid[2]);
-    data.WriteByteSeq(l_EnemyGuid[0]);
-    data.WriteByteSeq(l_PlayerGuid[5]);
-    data.WriteByteSeq(l_PlayerGuid[6]);
-    data.WriteByteSeq(l_PlayerGuid[0]);
-    data.WriteByteSeq(l_PlayerGuid[1]);
-    data.WriteByteSeq(l_EnemyGuid[7]);
-    data.WriteByteSeq(l_EnemyGuid[4]);
-    data.WriteByteSeq(l_PlayerGuid[7]);
-    data.WriteByteSeq(l_EnemyGuid[3]);
-    data.WriteByteSeq(l_PlayerGuid[3]);
-    data.WriteByteSeq(l_PlayerGuid[2]);
-    data.WriteByteSeq(l_PlayerGuid[4]);
-    data.WriteByteSeq(l_EnemyGuid[1]);
-    data.WriteByteSeq(l_EnemyGuid[5]);
+	data.WriteByteSeq(attackerGuid[5]);
+	data.WriteByteSeq(attackerGuid[0]);
+	data.WriteByteSeq(victimGuid[5]);
+	data.WriteByteSeq(attackerGuid[4]);
+	data.WriteByteSeq(attackerGuid[6]);
+	data.WriteByteSeq(victimGuid[6]);
+	data.WriteByteSeq(victimGuid[1]);
+	data.WriteByteSeq(victimGuid[0]);
+	data.WriteByteSeq(attackerGuid[7]);
+	data.WriteByteSeq(victimGuid[4]);
+	data.WriteByteSeq(attackerGuid[2]);
+	data.WriteByteSeq(victimGuid[3]);
+	data.WriteByteSeq(victimGuid[7]);
+	data.WriteByteSeq(victimGuid[2]);
+	data.WriteByteSeq(attackerGuid[3]);
+	data.WriteByteSeq(attackerGuid[1]);
 
-    SendMessageToSet(&data, true);
-
-    sLog->outDebug(LOG_FILTER_UNITS, "WORLD: Sent SMSG_ATTACKSTART");
+	SendMessageToSet(&data, true);
 }
 
 void Unit::SendMeleeAttackStop(Unit* victim)
 {
-    WorldPacket data(SMSG_ATTACKSTOP, (8+8+4));
-    ObjectGuid l_PlayerGuid = GetGUID();
-    ObjectGuid l_EnemyGuid  = victim ? victim->GetGUID() : 0;
+	WorldPacket data(SMSG_ATTACKSTOP, 8 + 8);
 
-    data.WriteBit(l_EnemyGuid[4]);
-    data.WriteBit(l_PlayerGuid[1]);
-    data.WriteBit(l_PlayerGuid[3]);
-    data.WriteBit(l_PlayerGuid[0]);
-    data.WriteBit(l_PlayerGuid[6]);
-    data.WriteBit(l_PlayerGuid[5]);
-    data.WriteBit(l_EnemyGuid[1]);
-    data.WriteBit(l_PlayerGuid[7]);
-    data.WriteBit(l_EnemyGuid[5]);
-    data.WriteBit(l_EnemyGuid[6]);
-    data.WriteBit(l_EnemyGuid[0]);
-    data.WriteBit(l_PlayerGuid[2]);
-    data.WriteBit(l_PlayerGuid[4]);
-    data.WriteBit(l_EnemyGuid[7]);
-    data.WriteBit(l_EnemyGuid[2]);
-    data.WriteBit(0);                                      //! Can also take the value 0x01, which seems related to updating rotation
-    data.WriteBit(l_EnemyGuid[3]);
+	ObjectGuid attackerGuid = GetGUID();
+	ObjectGuid victimGuid = victim ? victim->GetGUID() : 0;
 
-    data.FlushBits();
+	data.WriteBit(victimGuid[5]);
+	data.WriteBit(victimGuid[6]);
+	data.WriteBit(attackerGuid[3]);
+	data.WriteBit(attackerGuid[6]);
+	data.WriteBit(attackerGuid[7]);
+	data.WriteBit(attackerGuid[2]);
+	data.WriteBit(attackerGuid[5]);
+	data.WriteBit(victimGuid[4]);
+	data.WriteBit(1);
+	data.WriteBit(victimGuid[3]);
+	data.WriteBit(victimGuid[0]);
+	data.WriteBit(victimGuid[2]);
+	data.WriteBit(victimGuid[7]);
+	data.WriteBit(attackerGuid[4]);
+	data.WriteBit(attackerGuid[1]);
+	data.WriteBit(attackerGuid[0]);
+	data.WriteBit(victimGuid[1]);
 
-    data.WriteByteSeq(l_EnemyGuid[2]);
-    data.WriteByteSeq(l_EnemyGuid[0]);
-    data.WriteByteSeq(l_PlayerGuid[5]);
-    data.WriteByteSeq(l_PlayerGuid[0]);
-    data.WriteByteSeq(l_PlayerGuid[4]);
-    data.WriteByteSeq(l_EnemyGuid[4]);
-    data.WriteByteSeq(l_EnemyGuid[6]);
-    data.WriteByteSeq(l_EnemyGuid[7]);
-    data.WriteByteSeq(l_PlayerGuid[2]);
-    data.WriteByteSeq(l_PlayerGuid[3]);
-    data.WriteByteSeq(l_EnemyGuid[5]);
-    data.WriteByteSeq(l_EnemyGuid[1]);
-    data.WriteByteSeq(l_PlayerGuid[1]);
-    data.WriteByteSeq(l_PlayerGuid[7]);
-    data.WriteByteSeq(l_EnemyGuid[3]);
-    data.WriteByteSeq(l_PlayerGuid[6]);
+	data.FlushBits();
 
-    SendMessageToSet(&data, true);
+	data.WriteByteSeq(victimGuid[0]);
+	data.WriteByteSeq(victimGuid[3]);
+	data.WriteByteSeq(victimGuid[5]);
+	data.WriteByteSeq(victimGuid[2]);
+	data.WriteByteSeq(attackerGuid[0]);
+	data.WriteByteSeq(attackerGuid[6]);
+	data.WriteByteSeq(attackerGuid[3]);
+	data.WriteByteSeq(victimGuid[4]);
+	data.WriteByteSeq(attackerGuid[1]);
+	data.WriteByteSeq(attackerGuid[4]);
+	data.WriteByteSeq(victimGuid[6]);
+	data.WriteByteSeq(attackerGuid[5]);
+	data.WriteByteSeq(attackerGuid[7]);
+	data.WriteByteSeq(attackerGuid[2]);
+	data.WriteByteSeq(victimGuid[1]);
+	data.WriteByteSeq(victimGuid[7]);
 
-    sLog->outDebug(LOG_FILTER_UNITS, "WORLD: Sent SMSG_ATTACKSTOP");
-
-    if (victim)
-        sLog->outInfo(LOG_FILTER_UNITS, "%s %u stopped attacking %s %u", (GetTypeId() == TYPEID_PLAYER ? "Player" : "Creature"), GetGUIDLow(), (victim->GetTypeId() == TYPEID_PLAYER ? "player" : "creature"), victim->GetGUIDLow());
-    else
-        sLog->outInfo(LOG_FILTER_UNITS, "%s %u stopped attacking", (GetTypeId() == TYPEID_PLAYER ? "Player" : "Creature"), GetGUIDLow());
+	SendMessageToSet(&data, true);
 }
 
 bool Unit::isSpellBlocked(Unit* victim, SpellInfo const* spellProto, WeaponAttackType /*attackType*/)
@@ -4985,67 +4977,99 @@ void Unit::SendSpellDamageImmune(Unit* target, uint32 spellId)
 
 void Unit::SendAttackStateUpdate(CalcDamageInfo* damageInfo)
 {
-    uint32 count = 1;
-    size_t maxsize = 4+5+5+4+4+1+4+4+4+4+4+1+4+4+4+4+4*12;
-    WorldPacket data(SMSG_ATTACKERSTATEUPDATE, maxsize);    // we guess size
-    data << uint32(damageInfo->HitInfo);
-    data.append(damageInfo->attacker->GetPackGUID());
-    data.append(damageInfo->target->GetPackGUID());
-    data << uint32(damageInfo->damage);                     // Full damage
-    int32 overkill = damageInfo->damage - damageInfo->target->GetHealth();
-    data << uint32(overkill < 0 ? 0 : overkill);            // Overkill
-    data << uint8(count);                                   // Sub damage count
+	ObjectGuid guid = GetGUID();
+	uint32 count = 1;
+	uint32 counter = 0;
+	size_t maxsize = 4 + 5 + 5 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 * 12;
+	WorldPacket data(SMSG_ATTACKERSTATEUPDATE, maxsize);    // we guess size
 
-    for (uint32 i = 0; i < count; ++i)
-    {
-        data << uint32(damageInfo->damageSchoolMask);       // School of sub damage
-        data << float(damageInfo->damage);                  // sub damage
-        data << uint32(damageInfo->damage);                 // Sub Damage
-    }
+	bool hasUnkFlags = damageInfo->HitInfo & HITINFO_UNK26;
+	uint32 unkCounter = 0;
 
-    if (damageInfo->HitInfo & (HITINFO_FULL_ABSORB | HITINFO_PARTIAL_ABSORB))
-    {
-        for (uint32 i = 0; i < count; ++i)
-            data << uint32(damageInfo->absorb);             // Absorb
-    }
+	data.WriteBit(hasUnkFlags);
 
-    if (damageInfo->HitInfo & (HITINFO_FULL_RESIST | HITINFO_PARTIAL_RESIST))
-    {
-        for (uint32 i = 0; i < count; ++i)
-            data << uint32(damageInfo->resist);             // Resist
-    }
+	if (hasUnkFlags)
+	{
+		data.WriteBits(unkCounter, 21);
+		data.FlushBits();
 
-    data << uint8(damageInfo->TargetState);
-    data << uint32(0);  // Unknown attackerstate
-    data << uint32(0);  // Melee spellid
+		data << uint32(0);
 
-    if (damageInfo->HitInfo & HITINFO_BLOCK)
-        data << uint32(damageInfo->blocked_amount);
+		for (uint32 i = 0; i < unkCounter; ++i)
+		{
+			data << uint32(0);
+			data << uint32(0);
+		}
 
-    if (damageInfo->HitInfo & HITINFO_RAGE_GAIN)
-        data << uint32(0);
+		data << uint32(0);
+		data << uint32(0);
+	}
 
-    //! Probably used for debugging purposes, as it is not known to appear on retail servers
-    if (damageInfo->HitInfo & HITINFO_UNK1)
-    {
-        data << uint32(0);
-        data << float(0);
-        data << float(0);
-        data << float(0);
-        data << float(0);
-        data << float(0);
-        data << float(0);
-        data << float(0);
-        data << float(0);
-        for (uint8 i = 0; i < 2; ++i)
-        {
-            data << float(0);
-            data << float(0);
-        }
-        data << uint32(0);
-    }
+	// Needs to be flushed because data.wpos() wouldnt return the correct placeholder
+	data.FlushBits();
 
-    SendMessageToSet(&data, true);
+	size_t size = data.wpos();
+	data << uint32(0);                                      // Placeholder
+
+	data << uint32(damageInfo->HitInfo);
+	data.append(damageInfo->attacker->GetPackGUID());
+	data.append(damageInfo->target->GetPackGUID());
+	data << uint32(damageInfo->damage);                     // Full damage
+	int32 overkill = damageInfo->damage - damageInfo->target->GetHealth();
+	data << uint32(overkill < 0 ? 0 : overkill);            // Overkill
+	data << uint8(count);                                   // Sub damage count
+
+	for (uint32 i = 0; i < count; ++i)
+	{
+		data << uint32(damageInfo->damageSchoolMask);       // School of sub damage
+		data << float(damageInfo->damage);                  // sub damage
+		data << uint32(damageInfo->damage);                 // Sub Damage
+	}
+
+	if (damageInfo->HitInfo & (HITINFO_FULL_ABSORB | HITINFO_PARTIAL_ABSORB))
+	{
+		for (uint32 i = 0; i < count; ++i)
+			data << uint32(damageInfo->absorb);             // Absorb
+	}
+
+	if (damageInfo->HitInfo & (HITINFO_FULL_RESIST | HITINFO_PARTIAL_RESIST))
+	{
+		for (uint32 i = 0; i < count; ++i)
+			data << uint32(damageInfo->resist);             // Resist
+	}
+
+	data << uint8(damageInfo->TargetState);
+	data << uint32(0);                                      // Unknown attackerstate
+	data << uint32(0);                                      // Melee spellid
+
+	if (damageInfo->HitInfo & HITINFO_BLOCK)
+		data << uint32(damageInfo->blocked_amount);
+
+	if (damageInfo->HitInfo & HITINFO_RAGE_GAIN)
+		data << uint32(0);
+
+	//! Probably used for debugging purposes, as it is not known to appear on retail servers
+	if (damageInfo->HitInfo & HITINFO_UNK1)
+	{
+		data << uint32(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << float(0);
+		data << uint32(0);
+	}
+
+	if (damageInfo->HitInfo & (HITINFO_BLOCK | HITINFO_UNK12))
+		data << float(0);
+
+	data.put(size, data.wpos() - size - 4); // Blizz - Weird and Lazy people....
+	SendMessageToSet(&data, true);
 }
 
 void Unit::SendAttackStateUpdate(uint32 HitInfo, Unit* target, uint8 /*SwingType*/, SpellSchoolMask damageSchoolMask, uint32 Damage, uint32 AbsorbDamage, uint32 Resist, VictimState TargetState, uint32 BlockedAmount)
